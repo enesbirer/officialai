@@ -1,0 +1,63 @@
+// This is a sample Prisma schema for OfficialAI
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String
+  name          String
+  avatarUrl     String?
+  documents     Document[]
+  favorites     Favorite[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Document {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          String
+  title         String
+  content       String
+  metadata      Json?
+  isFavorite    Boolean  @default(false)
+  favorites     Favorite[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("documents")
+}
+
+model Favorite {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentId    String
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+
+  @@map("favorites")
+  @@unique([userId, documentId])
+}
+
+model Template {
+  id            String   @id @default(uuid())
+  category      String
+  name          String
+  description   String?
+  structure     Json
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  @@map("templates")
+}

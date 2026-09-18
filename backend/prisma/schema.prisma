@@ -1,0 +1,379 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Core Tables
+model User {
+  id                String           @id @default(uuid())
+  email             String           @unique
+  passwordHash      String?
+  firebaseUid       String?          @unique
+  isEmailVerified   Boolean          @default(false)
+  isActive          Boolean          @default(true)
+  isPremium         Boolean          @default(false)
+  profile           Profile?
+  refreshTokens     RefreshToken[]
+  petitions         Petition[]
+  generatedEmails   GeneratedEmail[]
+  generatedCVs      GeneratedCV[]
+  generatedPDFs     GeneratedPDF[]
+  promptHistories   PromptHistory[]
+  favoriteDocuments FavoriteDocument[]
+  recentDocuments   RecentDocument[]
+  aiConversations   AIConversation[]
+  notifications     Notification[]
+  feedbacks         Feedback[]
+  uploadedFiles     UploadedFile[]
+  ocrDocuments      OCRDocument[]
+  auditLogs         AuditLog[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  deletedAt         DateTime?
+
+  @@map("users")
+}
+
+model Profile {
+  id              String          @id @default(uuid())
+  userId          String          @unique
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName       String?
+  lastName        String?
+  phone           String?
+  language        String          @default("tr")
+  theme           String          @default("dark")
+  avatarUrl       String?
+  notifications   Json?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  deletedAt       DateTime?
+
+  @@map("profiles")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+// AI Document Tables
+model Petition {
+  id               String               @id @default(uuid())
+  userId           String
+  user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId       String
+  category         PetitionCategory     @relation(fields: [categoryId], references: [id])
+  title            String
+  content          String
+  metadata         Json?
+  isFavorite       Boolean              @default(false)
+  promptHistory    PromptHistory?
+  generatedPDF     GeneratedPDF?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  deletedAt        DateTime?
+
+  @@map("petitions")
+  @@index([userId])
+}
+
+model PetitionCategory {
+  id          String     @id @default(uuid())
+  name        String
+  description String?
+  isActive    Boolean    @default(true)
+  petitions   Petition[]
+  templates   Template[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("petition_categories")
+}
+
+model GeneratedEmail {
+  id            String        @id @default(uuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          String
+  tone          String
+  language      String
+  subject       String
+  content       String
+  isFavorite    Boolean       @default(false)
+  promptHistory PromptHistory?
+  generatedPDF  GeneratedPDF?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
+
+  @@map("generated_emails")
+  @@index([userId])
+}
+
+model GeneratedCV {
+  id            String        @id @default(uuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  templateId    String?
+  template      Template?     @relation(fields: [templateId], references: [id])
+  title         String
+  content       String
+  personalInfo  Json
+  education     Json
+  experience    Json
+  skills        Json
+  isFavorite    Boolean       @default(false)
+  promptHistory PromptHistory?
+  generatedPDF  GeneratedPDF?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
+
+  @@map("generated_cvs")
+  @@index([userId])
+}
+
+model GeneratedPDF {
+  id           String     @id @default(uuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  petitionId   String?    @unique
+  petition     Petition?  @relation(fields: [petitionId], references: [id])
+  emailId      String?    @unique
+  email        GeneratedEmail? @relation(fields: [emailId], references: [id])
+  cvId         String?    @unique
+  cv           GeneratedCV? @relation(fields: [cvId], references: [id])
+  fileUrl      String
+  fileName     String
+  fileSize     Int
+  metadata     Json?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  deletedAt    DateTime?
+
+  @@map("generated_pdfs")
+  @@index([userId])
+}
+
+// AI History
+model PromptHistory {
+  id               String           @id @default(uuid())
+  userId           String
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type             String
+  provider         String
+  systemPrompt     String
+  userPrompt       String
+  response         String
+  tokensUsed       Int?
+  processingTime   Int?
+  petitionId       String?          @unique
+  petition         Petition?        @relation(fields: [petitionId], references: [id])
+  emailId          String?          @unique
+  email            GeneratedEmail?  @relation(fields: [emailId], references: [id])
+  cvId             String?          @unique
+  cv               GeneratedCV?     @relation(fields: [cvId], references: [id])
+  conversationId   String?
+  conversation     AIConversation?  @relation(fields: [conversationId], references: [id])
+  createdAt        DateTime         @default(now())
+
+  @@map("prompt_history")
+  @@index([userId])
+}
+
+// Favorites & History
+model FavoriteDocument {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentId String
+  documentType String
+  createdAt  DateTime @default(now())
+
+  @@map("favorite_documents")
+  @@unique([userId, documentId, documentType])
+}
+
+model RecentDocument {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentId String
+  documentType String
+  accessedAt DateTime @default(now())
+
+  @@map("recent_documents")
+  @@index([userId])
+}
+
+// AI Conversation
+model AIConversation {
+  id          String        @id @default(uuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  messages    AIMessage[]
+  promptHistory PromptHistory[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  deletedAt   DateTime?
+
+  @@map("ai_conversations")
+  @@index([userId])
+}
+
+model AIMessage {
+  id             String         @id @default(uuid())
+  conversationId String
+  conversation   AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String // user, assistant, system
+  content        String
+  metadata       Json?
+  createdAt      DateTime       @default(now())
+
+  @@map("ai_messages")
+}
+
+// Notifications & Feedback
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  data      Json?
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+  @@index([userId])
+}
+
+model Feedback {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  rating    Int?
+  comment   String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@map("feedbacks")
+  @@index([userId])
+}
+
+// Settings & Templates
+model AppSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
+model Language {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("languages")
+}
+
+model Template {
+  id          String              @id @default(uuid())
+  categoryId  String?
+  category    TemplateCategory?   @relation(fields: [categoryId], references: [id])
+  petitionCategoryId String?
+  petitionCategory PetitionCategory? @relation(fields: [petitionCategoryId], references: [id])
+  name        String
+  description String?
+  type        String
+  structure   Json
+  isActive    Boolean             @default(true)
+  generatedCVs GeneratedCV[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@map("templates")
+}
+
+model TemplateCategory {
+  id          String     @id @default(uuid())
+  name        String
+  description String?
+  isActive    Boolean    @default(true)
+  templates   Template[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("template_categories")
+}
+
+// File & OCR
+model OCRDocument {
+  id            String       @id @default(uuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileId        String?      @unique
+  file          UploadedFile? @relation(fields: [fileId], references: [id])
+  content       String
+  metadata      Json?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  deletedAt     DateTime?
+
+  @@map("ocr_documents")
+  @@index([userId])
+}
+
+model UploadedFile {
+  id          String        @id @default(uuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileUrl     String
+  fileName    String
+  fileType    String
+  fileSize    Int
+  purpose     String // profile, pdf, scan, temp
+  ocrDocument OCRDocument?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  deletedAt   DateTime?
+
+  @@map("uploaded_files")
+  @@index([userId])
+}
+
+// Audit Log
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  resource  String
+  metadata  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+  @@index([userId])
+  @@index([createdAt])
+}
