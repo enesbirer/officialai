@@ -13,8 +13,8 @@ class AppConfig {
 
   // Varsayılan: masaüstü/web localhost; Android emülatör için --dart-define=BASE_URL=http://10.0.2.2:3000
   // Production için bu URL'i gerçek backend URL'i ile değiştirin
-  // Geçici olarak localhost - uygulama açıldığında backend'iniz çalışmıyorsa hata verebilir
-  static const String _defaultBaseUrl = 'http://10.0.2.2:3000';
+  // Render deploy URL'i ile güncellendi
+  static const String _defaultBaseUrl = 'https://YOUR_RENDER_URL.onrender.com';
 
   static const String apiVersion = 'v1';
 
