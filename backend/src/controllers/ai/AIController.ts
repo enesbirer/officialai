@@ -79,7 +79,11 @@ export class AIController {
   async chat(req: Request, res: Response, next: NextFunction) {
     try {
       const { message, history, conversationId } = chatSchema.parse(req.body);
-      const result = await this.aiService.chat(req.user!.id, message, history || [], conversationId);
+      const typedHistory = (history || []).map((h: any) => ({
+        role: h.role || 'user',
+        content: h.content || ''
+      }));
+      const result = await this.aiService.chat(req.user!.id, message, typedHistory, conversationId);
       res.status(HTTP_STATUS.OK).json({ success: true, data: result });
     } catch (error) {
       next(error);
