@@ -4,34 +4,6 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// Manuel migration endpoint
-app.get("/api/v1/admin/migrate", async (req, res) => {
-  try {
-    console.log("🔄 Manuel migration başlatılıyor...");
-    const { exec } = require("child_process");
-
-    exec("npx prisma migrate deploy", { cwd: process.cwd() }, (err: any, stdout: string, stderr: string) => {
-      if (err) {
-        console.error("Migration hatası:", err);
-        return res.status(500).json({ success: false, error: err.message });
-      }
-      console.log("Migration başarılı:", stdout);
-
-      // Migration sonrası seed çalıştır
-      exec("npx tsx prisma/seed.ts", { cwd: process.cwd() }, (seedErr: any, seedStdout: string, seedStderr: string) => {
-        if (seedErr) {
-          console.error("Seed hatası:", seedErr);
-          return res.status(500).json({ success: false, error: seedErr.message });
-        }
-        console.log("Seed başarılı:", seedStdout);
-        res.json({ success: true, message: "Migration ve seed başarıyla tamamlandı" });
-      });
-    });
-  } catch (e) {
-    res.status(500).json({ success: false, error: (e as any).message });
-  }
-});
-
 // Backend başlarken kategori verisi yoksa otomatik seed çalıştır
 async function autoSeedIfEmpty() {
   try {
