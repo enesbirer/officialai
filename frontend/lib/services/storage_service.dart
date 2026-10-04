@@ -8,14 +8,20 @@ class StorageService {
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
   );
-  late final Box _hiveBox;
+  Box? _hiveBox;
   bool _initialized = false;
 
   Future<void> init() async {
     if (_initialized) return;
-    await Hive.initFlutter();
-    _hiveBox = await Hive.openBox(AppConstants.hiveBoxName);
-    _initialized = true;
+    try {
+      await Hive.initFlutter();
+      _hiveBox = await Hive.openBox(AppConstants.hiveBoxName);
+      _initialized = true;
+    } catch (e) {
+      print('StorageService init hatası: $e');
+      // Hive başarısız olursa secure storage kullanmaya devam et
+      _initialized = true;
+    }
   }
 
   // ========== Secure String Storage (access tokens, refresh tokens vb.) ==========
@@ -49,40 +55,57 @@ class StorageService {
   // ========== Hive Storage - Key / Value (preferences, küçük objeler) ==========
 
   void saveData(String key, dynamic value) {
-    _hiveBox.put(key, value);
+    if (_hiveBox != null) {
+      _hiveBox!.put(key, value);
+    }
   }
 
   dynamic getData(String key) {
-    return _hiveBox.get(key);
+    if (_hiveBox != null) {
+      return _hiveBox!.get(key);
+    }
+    return null;
   }
 
   void deleteData(String key) {
-    _hiveBox.delete(key);
+    if (_hiveBox != null) {
+      _hiveBox!.delete(key);
+    }
   }
 
   Future<bool> containsKey(String key) async {
-    return _hiveBox.containsKey(key);
+    if (_hiveBox != null) {
+      return _hiveBox!.containsKey(key);
+    }
+    return false;
   }
 
   // ========== JSON Storage (user objesi, küçük kompleks nesneler) ==========
 
   Future<void> writeJson(String key, Map<String, dynamic> value) async {
-    final encoded = jsonEncode(value);
-    _hiveBox.put(key, encoded);
+    if (_hiveBox != null) {
+      final encoded = jsonEncode(value);
+      _hiveBox!.put(key, encoded);
+    }
   }
 
   Future<Map<String, dynamic>?> readJson(String key) async {
-    final raw = _hiveBox.get(key) as String?;
-    if (raw == null || raw.isEmpty) return null;
-    try {
-      return Map<String, dynamic>.from(jsonDecode(raw) as Map);
-    } catch (_) {
-      return null;
+    if (_hiveBox != null) {
+      final raw = _hiveBox!.get(key) as String?;
+      if (raw == null || raw.isEmpty) return null;
+      try {
+        return Map<String, dynamic>.from(jsonDecode(raw) as Map);
+      } catch (_) {
+        return null;
+      }
     }
+    return null;
   }
 
   Future<void> clearAll() async {
     await _secureStorage.deleteAll();
-    await _hiveBox.clear();
+    if (_hiveBox != null) {
+      await _hiveBox!.clear();
+    }
   }
 }

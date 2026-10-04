@@ -39,15 +39,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<void> _startDecision() async {
-    // Auth provider yüklenmesini bekle (async loading state tamamlanana kadar)
-    await Future.doWhile(() async {
-      final s = ref.read(authNotifierProvider);
-      if (s.isLoading) {
-        await Future.delayed(const Duration(milliseconds: 200));
-        return true;
-      }
-      return false;
-    });
+    // Auth provider yüklenmesini bekleme - backend cold start sorunu nedeniyle
+    // await Future.doWhile(() async {
+    //   final s = ref.read(authNotifierProvider);
+    //   if (s.isLoading) {
+    //     await Future.delayed(const Duration(milliseconds: 200));
+    //     return true;
+    //   }
+    //   return false;
+    // });
     // Minimum 2s göster
     await Future.delayed(const Duration(milliseconds: 1600));
     _navigate();

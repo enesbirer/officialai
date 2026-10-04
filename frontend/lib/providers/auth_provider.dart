@@ -19,8 +19,9 @@ final authNotifierProvider =
 class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
   final AuthRepository _repo;
 
-  AuthNotifier(this._repo) : super(const AsyncValue.loading()) {
-    loadUser();
+  AuthNotifier(this._repo) : super(const AsyncValue.data(null)) {
+    // Backend'e bağlanma - cold start sorunu nedeniyle
+    // loadUser();
   }
 
   Future<void> loadUser() async {

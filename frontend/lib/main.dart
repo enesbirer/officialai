@@ -23,7 +23,10 @@ void main() async {
         child: const MyApp(),
       ),
     );
-  } catch (e) {
+  } catch (e, stackTrace) {
+    print('=== UYGULAMA BAŞLATMA HATASI ===');
+    print('Hata: $e');
+    print('Stack trace: $stackTrace');
     runApp(
       ProviderScope(
         child: MaterialApp(
@@ -37,6 +40,14 @@ void main() async {
                   const Text('Uygulama başlatılırken hata oluştu'),
                   const SizedBox(height: 8),
                   Text('Hata: $e'),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      // Uygulamayı yeniden başlatmayı dene
+                      main();
+                    },
+                    child: const Text('Tekrar Dene'),
+                  ),
                 ],
               ),
             ),

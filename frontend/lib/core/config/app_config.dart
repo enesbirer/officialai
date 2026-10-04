@@ -14,7 +14,7 @@ class AppConfig {
   // Varsayılan: masaüstü/web localhost; Android emülatör için --dart-define=BASE_URL=http://10.0.2.2:3000
   // Production için bu URL'i gerçek backend URL'i ile değiştirin
   // Render deploy URL'i ile güncellendi
-  static const String _defaultBaseUrl = 'https://YOUR_RENDER_URL.onrender.com';
+  static const String _defaultBaseUrl = 'https://officialai-backend.onrender.com';
 
   static const String apiVersion = 'v1';
 
@@ -28,8 +28,8 @@ class AppConfig {
   static const String themeKey = 'officialai_theme';
   static const String onboardingShownKey = 'officialai_onboarding_shown';
 
-  // AI timeout
-  static const int aiRequestTimeoutSeconds = 60;
+  // AI timeout - Render cold start için artırıldı
+  static const int aiRequestTimeoutSeconds = 90;
 
   // RegEx
   static final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
