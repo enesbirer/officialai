@@ -18,7 +18,7 @@ export class EmailService {
     }
   }
 
-  async sendVerificationEmail(email: string, verificationCode: string) {
+  async sendVerificationEmail(email: string, verificationCode: string): Promise<boolean> {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #0A1E3C 0%, #1A2A4A 100%); padding: 30px; border-radius: 10px; text-align: center;">
@@ -40,25 +40,29 @@ export class EmailService {
 
     const subject = "OfficialAI - E-posta Doğrulama Kodu";
 
-    if (!this.transporter || config.email.mode === "log") {
-      console.log(`\n===== [EMAIL MODE=log] Gönderim Simüle Edildi =====
+    if (!this.transporter) {
+      console.log(`\n===== [EMAIL MODE=${config.email.mode}] Gönderim Simüle Edildi =====
 To: ${email}
 Subject: ${subject}
 Verification Code: ${verificationCode}
 =========================================================\n`);
-      return;
+      return false;
     }
 
     try {
       await this.transporter.sendMail({
-        from: config.email.from,
+        // Gmail SMTP ile gönderirken "from" adresi kimliği doğrulanmış hesap olmalıdır.
+        from: config.email.user ? `OfficialAI <${config.email.user}>` : config.email.from,
         to: email,
         subject,
         html,
       });
+      console.log(`✉️  Doğrulama e-postası gönderildi: ${email}`);
+      return true;
     } catch (error) {
-      console.error("Email gönderimi başarısız, fallback log:", error);
+      console.error("Email gönderimi başarısız:", error);
       console.log(`[EMAIL FALLBACK] Verification code for ${email}: ${verificationCode}`);
+      return false;
     }
   }
 

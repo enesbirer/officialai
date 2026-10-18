@@ -117,7 +117,7 @@ app.get("/api/v1/admin/migrate", async (req, res) => {
     console.log("🔄 Manuel migration başlatılıyor...");
     const { exec } = require("child_process");
 
-    exec("npx prisma migrate deploy", { cwd: process.cwd() }, (err: any, stdout: string, stderr: string) => {
+    exec("npx prisma migrate deploy; npx prisma db push --skip-generate --accept-data-loss", { cwd: process.cwd() }, (err: any, stdout: string, stderr: string) => {
       if (err) {
         console.error("Migration hatası:", err);
         return res.status(500).json({ success: false, error: err.message });

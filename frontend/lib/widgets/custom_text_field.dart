@@ -84,11 +84,22 @@ class _CustomTextFieldState extends State<CustomTextField> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final radius = BorderRadius.circular(widget.borderRadius);
 
-    return ClipRRect(
-      borderRadius: radius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: widget.blurX, sigmaY: widget.blurY),
-        child: TextFormField(
+    // Not: Buzlu cam arka planı ayrı bir katmanda tutuyoruz.
+    // Böylece TextField'ın yukarı kayan (floating) etiketi ClipRRect tarafından
+    // kırpılmaz; etiketin tamamı görünür kalır (önceden yarısı kesiliyordu).
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Positioned.fill(
+          child: ClipRRect(
+            borderRadius: radius,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: widget.blurX, sigmaY: widget.blurY),
+              child: const SizedBox.expand(),
+            ),
+          ),
+        ),
+        TextFormField(
           controller: widget.controller,
           initialValue: widget.initialValue,
           keyboardType: widget.keyboardType,
@@ -185,7 +196,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 }

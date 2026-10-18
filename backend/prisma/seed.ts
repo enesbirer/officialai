@@ -1,6 +1,15 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
+
+// Doğrudan giriş yapılabilecek, e-postası doğrulanmış hazır hesap.
+const DEMO_USER = {
+  email: "enesbirer5151@gmail.com",
+  password: "053951Enes",
+  firstName: "enes",
+  lastName: "birer",
+};
 
 const CATEGORIES: { name: string; description: string; fields?: Record<string, string> }[] = [
   {
@@ -233,6 +242,39 @@ async function main() {
       await prisma.language.create({ data: lng });
       console.log("✅ Dil:", lng.name);
     }
+  }
+
+  // Hazır kullanıcıyı oluştur / güncelle (e-postası doğrulanmış olarak işaretlenir).
+  const demoPasswordHash = await bcrypt.hash(DEMO_USER.password, 12);
+  const existingDemo = await prisma.user.findUnique({ where: { email: DEMO_USER.email } });
+  if (!existingDemo) {
+    await prisma.user.create({
+      data: {
+        email: DEMO_USER.email,
+        passwordHash: demoPasswordHash,
+        isEmailVerified: true,
+        isActive: true,
+        verificationCode: null,
+        verificationCodeExpiresAt: null,
+        profile: {
+          create: { firstName: DEMO_USER.firstName, lastName: DEMO_USER.lastName },
+        },
+      },
+    });
+    console.log("✅ Kullanıcı oluşturuldu:", DEMO_USER.email);
+  } else {
+    await prisma.user.update({
+      where: { email: DEMO_USER.email },
+      data: {
+        passwordHash: demoPasswordHash,
+        isEmailVerified: true,
+        isActive: true,
+        deletedAt: null,
+        verificationCode: null,
+        verificationCodeExpiresAt: null,
+      },
+    });
+    console.log("↩️  Kullanıcı güncellendi:", DEMO_USER.email);
   }
 
   console.log("\n✅ Seed tamamlandı!");

@@ -54,7 +54,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get welcomeToOfficialAI => 'OfficialAI\'ye Hoş Geldiniz';
 
   @override
-  String get aiOfficialDocumentAssistant => 'Yapay zeka destekli resmi belge asistanınız';
+  String get aiOfficialDocumentAssistant =>
+      'Yapay zeka destekli resmi belge asistanınız';
 
   @override
   String get home => 'Ana Sayfa';

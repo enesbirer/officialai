@@ -186,7 +186,7 @@ class AppTheme {
         thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? AppColors.icePrimary : AppColors.darkTextHint),
         trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? AppColors.iceSecondary.withAlpha(140) : AppColors.darkBgEnd),
       ),
-      tabBarTheme: TabBarTheme(
+      tabBarTheme: TabBarThemeData(
         dividerColor: Colors.transparent,
         labelColor: AppColors.darkTextPrimary,
         unselectedLabelColor: AppColors.darkTextHint,
@@ -201,7 +201,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         behavior: SnackBarBehavior.floating,
       ),
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: AppColors.darkGlassStrong,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: const BorderSide(color: AppColors.darkBorderStrong)),
         titleTextStyle: _darkTextTheme.titleLarge,
@@ -312,7 +312,7 @@ class AppTheme {
         side: const BorderSide(color: AppColors.lightBorder, width: 0.6),
         labelStyle: const TextStyle(color: AppColors.lightTextPrimary, fontWeight: FontWeight.w500),
       ),
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: AppColors.lightGlassStrong,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: const BorderSide(color: AppColors.lightBorderStrong)),
       ),

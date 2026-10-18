@@ -54,7 +54,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get welcomeToOfficialAI => 'Welcome to OfficialAI';
 
   @override
-  String get aiOfficialDocumentAssistant => 'Your AI-powered official document assistant';
+  String get aiOfficialDocumentAssistant =>
+      'Your AI-powered official document assistant';
 
   @override
   String get home => 'Home';
