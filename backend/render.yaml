@@ -2,7 +2,7 @@ services:
   - type: web
     name: officialai-backend
     env: node
-    buildCommand: npm install --include=dev && npm run build && npx prisma generate
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npx prisma migrate deploy; npx prisma db push --skip-generate --accept-data-loss; npm run seed; npm run start
     envVars:
       - key: NODE_ENV
