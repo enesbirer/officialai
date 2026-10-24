@@ -24,31 +24,46 @@ void main() async {
       ),
     );
   } catch (e, stackTrace) {
+    // Teknik ayrıntıları yalnızca loglarda tut; kullanıcıya sade mesaj göster.
     print('=== UYGULAMA BAŞLATMA HATASI ===');
     print('Hata: $e');
     print('Stack trace: $stackTrace');
     runApp(
       ProviderScope(
         child: MaterialApp(
+          debugShowCheckedModeBanner: false,
           home: Scaffold(
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error, size: 64, color: Colors.red),
-                  const SizedBox(height: 16),
-                  const Text('Uygulama başlatılırken hata oluştu'),
-                  const SizedBox(height: 8),
-                  Text('Hata: $e'),
-                  const SizedBox(height: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      // Uygulamayı yeniden başlatmayı dene
-                      main();
-                    },
-                    child: const Text('Tekrar Dene'),
+            body: SafeArea(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline_rounded, size: 56, color: Colors.redAccent),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Uygulama başlatılamadı',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Uygulama açılırken beklenmeyen bir sorun oluştu. Lütfen tekrar deneyin; '
+                        'sorun devam ederse uygulamayı kapatıp yeniden açın.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 14, height: 1.4),
+                      ),
+                      const SizedBox(height: 20),
+                      FilledButton(
+                        onPressed: () {
+                          // Uygulamayı yeniden başlatmayı dene
+                          main();
+                        },
+                        child: const Text('Tekrar Dene'),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),

@@ -1,9 +1,14 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/error_messages.dart';
+import '../../../core/utils/pdf_export_utils.dart';
 import '../../../widgets/bottom_nav_bar.dart';
+import '../../../widgets/primary_button.dart';
 import '../../../providers/ai_provider.dart';
 import '../../../providers/theme_provider.dart';
 
@@ -15,29 +20,12 @@ class FavoritesScreen extends ConsumerStatefulWidget {
 }
 
 class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
-  final List<Map<String, dynamic>> _demoFavs = [
-    {'id': 'f1', 'documentId': '1', 'type': 'petition', 'title': 'İşten Çıkış Dilekçesi - 2025',
-      'preview': 'Profesyonel formatta hazırlanmış, resmi dilde dilekçe örneği...', 'date': '15 Ocak 2025'},
-    {'id': 'f2', 'documentId': '2', 'type': 'cv', 'title': 'Yazılım Uzmanı CV (ATS)',
-      'preview': 'Ahmet Yılmaz - 7 yıl deneyim, Flutter, Node.js uzmanlığı...', 'date': '12 Ocak 2025'},
-    {'id': 'f3', 'documentId': '3', 'type': 'email', 'title': 'İş Başvurusu - XYZ Şirketi',
-      'preview': 'Sayın İnsan Kaynakları Müdürlüğü, Pozisyon için başvurumu...', 'date': '10 Ocak 2025'},
-  ];
-
   IconData _iconFor(String type) => switch (type) {
         'petition' => Icons.description_outlined,
-        'email' => Icons.email_outlined,
+        'email' => Icons.mail_outline_rounded,
         'cv' => Icons.badge_outlined,
         'ocr' => Icons.document_scanner_outlined,
         _ => Icons.favorite_outline,
-      };
-
-  Color _colorFor(String type) => switch (type) {
-        'petition' => Colors.indigo,
-        'email' => Colors.teal,
-        'cv' => Colors.deepPurple,
-        'ocr' => Colors.orangeAccent,
-        _ => AppColors.icePrimary,
       };
 
   @override
@@ -47,34 +35,54 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
             MediaQuery.of(context).platformBrightness == Brightness.dark);
     final favAsync = ref.watch(favoritesProvider);
 
+    final text = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+
     final page = Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        flexibleSpace: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30, tileMode: TileMode.clamp),
+            child: Container(
+              decoration: BoxDecoration(
+                color: (isDark ? const Color(0xFF1C1C1E) : Colors.white).withValues(alpha: 0.82),
+                border: Border(
+                  bottom: BorderSide(
+                    color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                    width: 0.5,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
         title: Text(
           'Favorilerim',
           style: TextStyle(
-            color: isDark ? Colors.white : Colors.black87,
-            fontWeight: FontWeight.w800,
-            fontSize: 18,
+            color: text,
+            fontWeight: FontWeight.w600,
+            fontSize: 17,
+            letterSpacing: -0.2,
           ),
         ),
         centerTitle: true,
         actions: [
           IconButton(
             onPressed: () => ref.invalidate(favoritesProvider),
-            icon: Icon(Icons.refresh, color: isDark ? Colors.white70 : Colors.black87),
+            icon: Icon(Icons.refresh_rounded, color: text, size: 22),
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: favAsync.when(
         loading: () => _buildShimmer(isDark),
-        error: (e, _) => _buildList(context, isDark, _demoFavs),
+        error: (e, _) => _buildError(isDark, e),
         data: (list) {
-          final data = list.isEmpty ? _demoFavs : list;
-          if (data.isEmpty) return _buildEmpty(isDark);
-          return _buildList(context, isDark, data);
+          if (list.isEmpty) return _buildEmpty(isDark);
+          return _buildList(context, isDark, list);
         },
       ),
       bottomNavigationBar: const BottomNavBar(currentIndex: 3),
@@ -85,27 +93,115 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
         : GlassBackground.iceLightGradient(child: page);
   }
 
+  Future<void> _export(Map<String, dynamic> f) async {
+    final title = (f['title'] ?? '').toString();
+    final content = (f['content'] ?? '').toString();
+    if (content.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bu belgeye ait içerik bulunamadı.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    try {
+      await PdfExportUtils.exportDocument(
+        type: (f['type'] ?? f['documentType'] ?? 'document').toString(),
+        title: title,
+        content: content,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(friendlyErrorMessage(e, action: 'PDF oluşturma')),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildError(bool isDark, Object error) {
+    final text = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+    final sub = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final accent = isDark ? AppColors.accentDark : AppColors.accent;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.cloud_off_outlined, size: 48, color: accent),
+            const SizedBox(height: 16),
+            Text(
+              'Favoriler yüklenemedi',
+              style: TextStyle(color: text, fontSize: 17, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              friendlyErrorMessage(error, action: 'Favori listesi'),
+              textAlign: TextAlign.center,
+              style: TextStyle(color: sub, fontSize: 14, height: 1.4),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: 200,
+              child: PrimaryButton(
+                text: 'Tekrar Dene',
+                icon: Icons.refresh_rounded,
+                variant: PrimaryButtonVariant.outlined,
+                onPressed: () => ref.invalidate(favoritesProvider),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildShimmer(bool isDark) {
+    final placeholder = (isDark ? Colors.white : Colors.black).withValues(alpha: 0.06);
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 120),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
       itemCount: 5,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (_, __) => GlassContainer(
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
-            Container(width: 48, height: 48, decoration: BoxDecoration(
-              color: isDark ? Colors.white10 : Colors.black12,
-              borderRadius: BorderRadius.circular(14),
-            )),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: placeholder,
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(height: 14, width: double.infinity, color: isDark ? Colors.white10 : Colors.black12),
+                  Container(
+                    height: 14,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: placeholder,
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                  ),
                   const SizedBox(height: 10),
-                  Container(height: 12, width: 150, color: isDark ? Colors.white10 : Colors.black12),
+                  Container(
+                    height: 12,
+                    width: 150,
+                    decoration: BoxDecoration(
+                      color: placeholder,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -116,6 +212,10 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
   }
 
   Widget _buildEmpty(bool isDark) {
+    final text = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+    final sub = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final accent = isDark ? AppColors.accentDark : AppColors.accent;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(28),
@@ -123,32 +223,32 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(24),
+              width: 88,
+              height: 88,
               decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
-                gradient: LinearGradient(colors: [
-                  Colors.pinkAccent.withOpacity(0.2),
-                  Colors.redAccent.withOpacity(0.2),
-                ]),
-                border: Border.all(color: Colors.pinkAccent.withOpacity(0.3)),
               ),
-              child: const Icon(Icons.favorite_border, size: 60, color: Colors.pinkAccent),
+              alignment: Alignment.center,
+              child: Icon(Icons.favorite_border_rounded, size: 44, color: accent),
             ),
             const SizedBox(height: 20),
             Text(
               'Henüz favori yok',
               style: TextStyle(
-                color: isDark ? Colors.white : Colors.black87,
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
+                color: text,
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.2,
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Text(
               'Oluşturduğunuz dokümanları favorilere ekleyerek hızlıca erişebilirsiniz.',
               style: TextStyle(
-                color: isDark ? Colors.white60 : Colors.black54,
-                fontSize: 13,
+                color: sub,
+                fontSize: 14,
+                height: 1.4,
               ),
               textAlign: TextAlign.center,
             ),
@@ -159,14 +259,18 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
   }
 
   Widget _buildList(BuildContext context, bool isDark, List<Map<String, dynamic>> list) {
+    final text = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+    final sub = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final accent = isDark ? AppColors.accentDark : AppColors.accent;
+
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(favoritesProvider),
-      color: AppColors.icePrimary,
+      color: accent,
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 120),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
         itemCount: list.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (ctx, i) {
           final f = list[i];
           final type = (f['type'] ?? f['documentType'] ?? '').toString();
@@ -182,10 +286,10 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
               alignment: Alignment.centerRight,
               padding: const EdgeInsets.only(right: 20),
               decoration: BoxDecoration(
-                color: Colors.redAccent.withOpacity(0.7),
-                borderRadius: BorderRadius.circular(18),
+                color: AppColors.error,
+                borderRadius: BorderRadius.circular(14),
               ),
-              child: const Icon(Icons.delete_outline, color: Colors.white, size: 28),
+              child: const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 24),
             ),
             confirmDismiss: (_) async {
               if (docId.isEmpty) return true;
@@ -204,17 +308,14 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 48,
-                    height: 48,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [
-                        _colorFor(type).withOpacity(0.9),
-                        _colorFor(type),
-                      ]),
-                      borderRadius: BorderRadius.circular(14),
+                      color: accent.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     alignment: Alignment.center,
-                    child: Icon(_iconFor(type), color: Colors.white, size: 24),
+                    child: Icon(_iconFor(type), color: accent, size: 22),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -224,28 +325,22 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                         Text(
                           title.isEmpty ? 'Favori Doküman' : title,
                           style: TextStyle(
-                            color: isDark ? Colors.white : Colors.black87,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14.5,
+                            color: text,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                            letterSpacing: -0.2,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 5),
+                        const SizedBox(height: 4),
                         Row(
                           children: [
-                            Icon(
-                              Icons.access_time_outlined,
-                              size: 13,
-                              color: isDark ? Colors.white38 : Colors.black45,
-                            ),
+                            Icon(Icons.access_time_outlined, size: 13, color: sub),
                             const SizedBox(width: 4),
                             Text(
                               date,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark ? Colors.white38 : Colors.black45,
-                              ),
+                              style: TextStyle(fontSize: 13, color: sub),
                             ),
                           ],
                         ),
@@ -255,34 +350,51 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 12.5,
-                            color: isDark ? Colors.white60 : Colors.black54,
+                            fontSize: 13,
+                            color: sub,
                             height: 1.4,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
                   Column(
                     children: [
-                      const Icon(Icons.favorite, color: Colors.pinkAccent, size: 24),
-                      const SizedBox(height: 8),
-                      IconButton(
-                        onPressed: () async {
-                          final full = '$title\n\n$preview';
-                          await Clipboard.setData(ClipboardData(text: full));
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('✓ Kopyalandı'), behavior: SnackBarBehavior.floating),
-                            );
-                          }
-                        },
-                        icon: Icon(
-                          Icons.copy_outlined,
-                          size: 20,
-                          color: isDark ? Colors.white60 : Colors.black54,
-                        ),
+                      Icon(Icons.favorite_rounded, color: accent, size: 20),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 44,
+                            height: 44,
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              onPressed: () => _export(f),
+                              icon: Icon(Icons.picture_as_pdf_outlined, size: 20, color: sub),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 44,
+                            height: 44,
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              onPressed: () async {
+                                final full = '$title\n\n$preview';
+                                await Clipboard.setData(ClipboardData(text: full));
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Kopyalandı'),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                }
+                              },
+                              icon: Icon(Icons.copy_outlined, size: 20, color: sub),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/config/app_config.dart';
+import '../../../core/utils/error_messages.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../widgets/primary_button.dart';
 import '../../../widgets/custom_text_field.dart';
@@ -50,7 +51,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       SnackBar(
         content: Text(msg),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: error ? AppColors.error : AppColors.iceSecondary,
+        backgroundColor: error ? AppColors.error : null,
       ),
     );
   }
@@ -91,11 +92,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         if (s.value != null) {
           context.go('/dashboard');
         } else if (s.hasError) {
-          _snack('Doğrulama başarısız: ${_err(s.error)}', error: true);
+          _snack(friendlyErrorMessage(s.error ?? Exception('unknown'), action: 'Doğrulama'), error: true);
         }
       }
     } catch (e) {
-      if (mounted) _snack('Doğrulama başarısız: ${_err(e)}', error: true);
+      if (mounted) _snack(friendlyErrorMessage(e, action: 'Doğrulama'), error: true);
     }
   }
 
@@ -108,6 +109,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final sub = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: isDark
           ? GlassBackground.iceDarkGradient(child: _buildBody(text, sub, loading))
           : GlassBackground.iceLightGradient(child: _buildBody(text, sub, loading)),
@@ -115,95 +117,78 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Widget _buildBody(Color text, Color sub, bool loading) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = isDark ? AppColors.accentDark : AppColors.accent;
+
     return SafeArea(
       child: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: Form(
             key: _formKey,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                GlassContainer(
-                  padding: const EdgeInsets.all(20),
-                  borderRadius: 32,
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 72,
-                        height: 72,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [AppColors.iceAccent, AppColors.icePrimary],
-                          ),
-                        ),
-                        child: Icon(
-                          _stageVerify ? Icons.verified_user_rounded : Icons.person_add_alt_rounded,
-                          color: Colors.white,
-                          size: 36,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        _stageVerify ? 'E-postayı Doğrula' : 'Hesap Oluştur',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          color: text,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _stageVerify
-                            ? 'Gönderilen kodu $_registeredEmail adresine girin'
-                            : 'Tüm özelliklere erişmek için üye olun',
-                        style: TextStyle(color: sub, fontSize: 13),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: accent,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    _stageVerify ? Icons.verified_user_outlined : Icons.person_add_alt_outlined,
+                    color: Colors.white,
+                    size: 36,
                   ),
                 ),
-                const SizedBox(height: 28),
-                GlassContainer(
-                  padding: const EdgeInsets.all(18),
-                  borderRadius: 26,
-                  child: Column(
-                    children: [
-                      if (!_stageVerify) ..._registerFields(),
-                      if (_stageVerify) ..._verifyFields(sub),
-                      const SizedBox(height: 18),
-                      PrimaryButton(
-                        text: _stageVerify ? 'Doğrula ve Giriş Yap' : 'Hesap Oluştur',
-                        icon: _stageVerify ? Icons.task_alt_rounded : Icons.how_to_reg_rounded,
-                        loading: loading,
-                        onPressed: _stageVerify ? _verify : _register,
-                      ),
-                      const SizedBox(height: 16),
-                      if (_stageVerify)
-                        PrimaryButton(
-                          text: 'Geri Dön',
-                          variant: PrimaryButtonVariant.outlined,
-                          icon: Icons.arrow_back_rounded,
-                          onPressed: loading
-                              ? null
-                              : () => setState(() {
-                                    _stageVerify = false;
-                                    _registeredEmail = null;
-                                  }),
-                        )
-                      else
-                        PrimaryButton(
-                          text: 'Giriş Sayfasına Dön',
-                          variant: PrimaryButtonVariant.glass,
-                          icon: Icons.arrow_back_rounded,
-                          onPressed: loading ? null : () => context.go('/login'),
-                        ),
-                    ],
+                const SizedBox(height: 20),
+                Text(
+                  _stageVerify ? 'E-postayı Doğrula' : 'Hesap Oluştur',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.6,
+                    color: text,
                   ),
                 ),
+                const SizedBox(height: 6),
+                Text(
+                  _stageVerify
+                      ? 'Gönderilen kodu $_registeredEmail adresine girin'
+                      : 'Tüm özelliklere erişmek için üye olun',
+                  style: TextStyle(color: sub, fontSize: 15, height: 1.35),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+
+                if (!_stageVerify) ..._registerFields(),
+                if (_stageVerify) ..._verifyFields(sub),
+                const SizedBox(height: 22),
+                PrimaryButton(
+                  text: _stageVerify ? 'Doğrula ve Giriş Yap' : 'Hesap Oluştur',
+                  loading: loading,
+                  onPressed: _stageVerify ? _verify : _register,
+                ),
+                const SizedBox(height: 12),
+                if (_stageVerify)
+                  PrimaryButton(
+                    text: 'Geri Dön',
+                    variant: PrimaryButtonVariant.outlined,
+                    onPressed: loading
+                        ? null
+                        : () => setState(() {
+                              _stageVerify = false;
+                              _registeredEmail = null;
+                            }),
+                  )
+                else
+                  PrimaryButton(
+                    text: 'Giriş Sayfasına Dön',
+                    variant: PrimaryButtonVariant.outlined,
+                    onPressed: loading ? null : () => context.go('/login'),
+                  ),
               ],
             ),
           ),
@@ -221,7 +206,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               controller: _firstNameCtrl,
               label: 'Ad',
               hint: 'Ahmet',
-              prefixIcon: Icons.person_outline_rounded,
               validator: (v) => (v == null || v.trim().isEmpty) ? 'Ad gerekli' : null,
               textInputAction: TextInputAction.next,
             ),
@@ -243,7 +227,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         controller: _emailCtrl,
         label: 'E-posta',
         hint: 'ornek@mail.com',
-        prefixIcon: Icons.email_outlined,
+        prefixIcon: Icons.mail_outline_rounded,
         keyboardType: TextInputType.emailAddress,
         autofillHints: const [AutofillHints.email],
         textInputAction: TextInputAction.next,
@@ -273,7 +257,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         controller: _pass2Ctrl,
         label: 'Şifre (Tekrar)',
         hint: '••••••••',
-        prefixIcon: Icons.lock_rounded,
+        prefixIcon: Icons.lock_outline_rounded,
         obscureText: true,
         textInputAction: TextInputAction.done,
         onFieldSubmitted: (_) => _register(),
@@ -287,21 +271,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   List<Widget> _verifyFields(Color sub) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = isDark ? AppColors.accentDark : AppColors.accent;
     return [
-      const SizedBox(height: 8),
+      const SizedBox(height: 4),
       CustomTextField(
         controller: _codeCtrl,
         label: 'Doğrulama Kodu',
         hint: '000000',
-        prefixIcon: Icons.pin_outlined,
         keyboardType: TextInputType.number,
         maxLength: 6,
         textAlign: TextAlign.center,
         style: TextStyle(
-          color: AppColors.icePrimary,
+          color: accent,
           fontSize: 28,
-          letterSpacing: 14,
-          fontWeight: FontWeight.w800,
+          letterSpacing: 12,
+          fontWeight: FontWeight.w700,
         ),
         onFieldSubmitted: (_) => _verify(),
         validator: (v) {
@@ -310,9 +295,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           return null;
         },
       ),
-      const SizedBox(height: 6),
-      Text('Kodu almadınız mı? 60 sn sonra tekrar deneyin',
-          style: TextStyle(color: sub, fontSize: 12)),
+      const SizedBox(height: 10),
+      Text(
+        'Kodu almadınız mı? 60 sn sonra tekrar deneyin',
+        style: TextStyle(color: sub, fontSize: 13),
+      ),
     ];
   }
 }

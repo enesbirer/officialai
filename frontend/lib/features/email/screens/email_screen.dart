@@ -1,9 +1,12 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/app_navigation.dart';
+import '../../../core/utils/error_messages.dart';
 import '../../../core/utils/pdf_export_utils.dart';
 import '../../../providers/ai_provider.dart';
 import '../../../widgets/primary_button.dart';
@@ -67,56 +70,21 @@ class _EmailScreenState extends ConsumerState<EmailScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _hasResult = true;
-        final demo = _demoEmail(type, tone, lang);
-        _resultSubjectCtrl.text = demo.$1;
-        _resultBodyCtrl.text = demo.$2;
-      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Sunucu yanıtı alınamadı, demo gösteriliyor: ${e.toString().characters.take(50)}'),
-          backgroundColor: AppColors.warning,
+          content: Text(friendlyErrorMessage(e, action: 'E-posta oluşturma')),
+          backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
       );
     }
   }
 
-  (String, String) _demoEmail(String type, String tone, String lang) {
-    final isTr = lang == 'Türkçe';
-    final greeting = isTr
-        ? (_toneIdx == 1 ? 'Merhaba,' : (isTr && _typeIdx == 0 ? 'Sayın Yetkili,' : 'Merhaba,'))
-        : (_toneIdx == 1 ? 'Hi there,' : 'Dear Sir/Madam,');
-    final signoff =
-        isTr ? (_typeIdx == 0 ? 'Saygılarımla,' : 'İyi günler dilerim,') : 'Best regards,';
-    final sender =
-        _senderCtrl.text.trim().isNotEmpty ? _senderCtrl.text.trim() : (isTr ? '[Ad Soyad]' : '[Your Name]');
-    final ctx = _contextCtrl.text.trim().isNotEmpty
-        ? _contextCtrl.text.trim()
-        : (isTr
-            ? '[E-postanın konusunu ve amacını buraya yazın - Bu metin sizin bağlamınıza göre AI tarafından otomatik olarak genişletilecektir.]'
-            : '[Write context here - this text will be expanded by AI based on your context]');
-    final subject = isTr
-        ? '$type Konulu: ${ctx.length > 50 ? '${ctx.substring(0, 50)}...' : ctx}'
-        : '$type: ${ctx.length > 60 ? '${ctx.substring(0, 60)}...' : ctx}';
-    final body = '''$greeting
-
-$ctx
-
-${tone == 'Kısa ve Net' ? (isTr ? 'Özetle, konuyu kısa ve net şekilde iletmek istedim.' : 'I wanted to communicate this briefly and clearly.') : tone == 'İkna Edici' ? (isTr ? 'Bu konuda sizlerden gerekli hassasiyeti göstererek yardımcı olmanızı rica ederim. Konunun takipçisi olacağım.' : 'I kindly request you to consider this matter and assist. I will follow up accordingly.') : (isTr ? 'Konunun değerlendirilmesini ve en kısa sürede geri dönüş yapılmasını temenni ederim.' : 'I kindly request your consideration and a prompt reply.')}
-
-$signoff
-$sender
-''';
-    return (subject, body);
-  }
-
   Future<void> _copy() async {
     await Clipboard.setData(ClipboardData(text: '${_resultSubjectCtrl.text}\n\n${_resultBodyCtrl.text}'));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('E-posta panoya kopyalandı ✓'), backgroundColor: AppColors.success, behavior: SnackBarBehavior.floating),
+        const SnackBar(content: Text('E-posta panoya kopyalandı'), backgroundColor: AppColors.success, behavior: SnackBarBehavior.floating),
       );
     }
   }
@@ -167,19 +135,55 @@ $sender
     final loading = ref.watch(emailGenerationProvider).isLoading;
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: const Text('E-posta Üretici'),
-        leading: IconButton(onPressed: () => context.go('/dashboard'), icon: const Icon(Icons.arrow_back_ios_new_rounded)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        flexibleSpace: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30, tileMode: TileMode.clamp),
+            child: Container(
+              decoration: BoxDecoration(
+                color: (isDark ? const Color(0xFF1C1C1E) : Colors.white).withValues(alpha: 0.82),
+                border: Border(
+                  bottom: BorderSide(
+                    color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                    width: 0.5,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        title: Text(
+          'E-posta Üretici',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.2,
+            color: text,
+          ),
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          onPressed: () => AppNavigation.back(context),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: text),
+        ),
         actions: [
-          IconButton(onPressed: () => setState(() {
-            _hasResult = false;
-            _contextCtrl.clear();
-            _recipientCtrl.clear();
-            _senderCtrl.clear();
-            _resultSubjectCtrl.clear();
-            _resultBodyCtrl.clear();
-            ref.read(emailGenerationProvider.notifier).reset();
-          }), icon: const Icon(Icons.refresh_rounded)),
+          IconButton(
+            onPressed: () => setState(() {
+              _hasResult = false;
+              _contextCtrl.clear();
+              _recipientCtrl.clear();
+              _senderCtrl.clear();
+              _resultSubjectCtrl.clear();
+              _resultBodyCtrl.clear();
+              ref.read(emailGenerationProvider.notifier).reset();
+            }),
+            icon: Icon(Icons.refresh_rounded, size: 22, color: text),
+          ),
+          const SizedBox(width: 4),
         ],
       ),
       body: isDark
@@ -192,38 +196,47 @@ $sender
     return SafeArea(
       top: false,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         child: _hasResult ? _resultSection(text, sub, loading) : _formSection(text, sub, loading),
       ),
     );
   }
 
   Widget _chips(List<String> options, int selected, ValueChanged<int> onTap, Color text) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = isDark ? AppColors.accentDark : AppColors.accent;
+    final fill = isDark ? AppColors.darkFill : AppColors.lightFill;
+
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: List.generate(options.length, (i) {
         final sel = i == selected;
-        return InkWell(
-          borderRadius: BorderRadius.circular(999),
-          onTap: () => onTap(i),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              color: sel ? AppColors.icePrimary.withAlpha(85) : AppColors.darkGlass,
-              border: Border.all(
-                color: sel ? AppColors.icePrimary : AppColors.darkBorder.withAlpha(140),
-                width: sel ? 1.4 : 0.8,
-              ),
-            ),
-            child: Text(
-              options[i],
-              style: TextStyle(
-                color: sel ? Colors.white : text,
-                fontWeight: sel ? FontWeight.w800 : FontWeight.w600,
-                fontSize: 13,
+        return Semantics(
+          button: true,
+          selected: sel,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => onTap(i),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                constraints: const BoxConstraints(minHeight: 44),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: sel ? accent : fill,
+                ),
+                child: Text(
+                  options[i],
+                  style: TextStyle(
+                    color: sel ? Colors.white : text,
+                    fontWeight: sel ? FontWeight.w600 : FontWeight.w500,
+                    fontSize: 15,
+                  ),
+                ),
               ),
             ),
           ),
@@ -238,18 +251,18 @@ $sender
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _headerCard('E-posta Tipi', 'E-postan amacını seçin', text, sub),
+          _headerCard('E-posta Tipi', 'E-postanın amacını seçin', text, sub),
           _chips(_types, _typeIdx, (i) => setState(() => _typeIdx = i), text),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           _headerCard('Ton', 'İletişim tarzını seçin', text, sub),
           _chips(_tones, _toneIdx, (i) => setState(() => _toneIdx = i), text),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           _headerCard('Dil', 'Hedef dili seçin', text, sub),
           _chips(_languages, _langIdx, (i) => setState(() => _langIdx = i), text),
           const SizedBox(height: 24),
           GlassContainer(
-            borderRadius: 22,
-            padding: const EdgeInsets.all(14),
+            borderRadius: 16,
+            padding: const EdgeInsets.all(16),
             child: Column(
               children: [
                 CustomTextField(
@@ -258,15 +271,17 @@ $sender
                   hint: 'alici@ornek.com',
                   prefixIcon: Icons.person_search_rounded,
                   keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 CustomTextField(
                   controller: _senderCtrl,
                   label: 'Gönderen Adı (opsiyonel)',
                   hint: 'Ahmet Yılmaz',
                   prefixIcon: Icons.badge_outlined,
+                  textInputAction: TextInputAction.next,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 CustomTextField(
                   controller: _contextCtrl,
                   label: 'Bağlam / Konu *',
@@ -285,7 +300,13 @@ $sender
             ),
           ),
           const SizedBox(height: 20),
-          PrimaryButton(text: 'E-posta Oluştur', icon: Icons.auto_awesome_rounded, loading: loading, onPressed: _generate),
+          PrimaryButton(
+            text: 'E-posta Oluştur',
+            icon: Icons.auto_awesome_rounded,
+            loading: loading,
+            borderRadius: 14,
+            onPressed: _generate,
+          ),
         ],
       ),
     );
@@ -293,12 +314,30 @@ $sender
 
   Widget _headerCard(String title, String subtitle, Color text, Color sub) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(2, 0, 2, 8),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: text)),
-        const SizedBox(height: 2),
-        Text(subtitle, style: TextStyle(color: sub, fontSize: 12)),
-      ]),
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title.toUpperCase(),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.4,
+              color: sub,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: sub,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -307,51 +346,103 @@ $sender
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+          padding: const EdgeInsets.only(bottom: 16),
           child: Row(
             children: [
-              const Icon(Icons.mark_email_read_outlined, color: AppColors.success, size: 28),
-              const SizedBox(width: 10),
-              Text('E-postanız Hazır!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: text)),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                alignment: Alignment.center,
+                child: const Icon(Icons.mark_email_read_outlined, color: AppColors.success, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'E-postanız Hazır',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.4,
+                    color: text,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
         GlassContainer(
-          borderRadius: 22,
-          padding: const EdgeInsets.all(14),
+          borderRadius: 16,
+          padding: const EdgeInsets.all(16),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CustomTextField(
                 controller: _resultSubjectCtrl,
                 label: 'Konu',
                 prefixIcon: Icons.short_text_rounded,
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17, color: text),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               CustomTextField(
                 controller: _resultBodyCtrl,
                 label: 'E-posta Gövdesi',
                 prefixIcon: null,
                 minLines: 16,
                 maxLines: 30,
+                style: TextStyle(fontSize: 16, height: 1.5, color: text),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         Row(
           children: [
-            Expanded(child: PrimaryButton(text: 'Kopyala', icon: Icons.copy_all_rounded, variant: PrimaryButtonVariant.glass, onPressed: _copy)),
-            const SizedBox(width: 10),
-            Expanded(child: PrimaryButton(text: 'Favori', icon: Icons.favorite_border_rounded, variant: PrimaryButtonVariant.outlined, onPressed: _fav)),
+            Expanded(
+              child: PrimaryButton(
+                text: 'Kopyala',
+                icon: Icons.copy_all_rounded,
+                variant: PrimaryButtonVariant.glass,
+                borderRadius: 14,
+                onPressed: _copy,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: PrimaryButton(
+                text: 'Favori',
+                icon: Icons.favorite_border_rounded,
+                variant: PrimaryButtonVariant.outlined,
+                borderRadius: 14,
+                onPressed: _fav,
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: PrimaryButton(text: 'PDF', icon: Icons.picture_as_pdf_outlined, variant: PrimaryButtonVariant.glass, onPressed: _exportPdf)),
-            const SizedBox(width: 10),
-            Expanded(child: PrimaryButton(text: 'Paylaş', icon: Icons.share_rounded, onPressed: _share)),
+            Expanded(
+              child: PrimaryButton(
+                text: 'PDF',
+                icon: Icons.picture_as_pdf_outlined,
+                variant: PrimaryButtonVariant.glass,
+                borderRadius: 14,
+                onPressed: _exportPdf,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: PrimaryButton(
+                text: 'Paylaş',
+                icon: Icons.share_rounded,
+                borderRadius: 14,
+                onPressed: _share,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -359,6 +450,7 @@ $sender
           text: 'Yeni E-posta',
           icon: Icons.edit_note_rounded,
           variant: PrimaryButtonVariant.glass,
+          borderRadius: 14,
           onPressed: loading
               ? null
               : () => setState(() {

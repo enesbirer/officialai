@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../core/theme/app_theme.dart';
 import '../core/config/app_config.dart';
 import '../providers/auth_provider.dart';
-import '../providers/theme_provider.dart';
 import '../providers/storage_service_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -85,6 +84,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: isDark
           ? GlassBackground.iceDarkGradient(child: _buildBody())
           : GlassBackground.iceLightGradient(child: _buildBody()),
@@ -93,10 +93,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   Widget _buildBody() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor =
-        isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final subColor =
-        isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final accent = isDark ? AppColors.accentDark : AppColors.accent;
+    final textColor = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+    final subColor = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+
     return SafeArea(
       child: Center(
         child: Column(
@@ -106,30 +106,23 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               opacity: _fade,
               child: ScaleTransition(
                 scale: _scale,
-                child: GlassContainer(
-                  borderRadius: 36,
-                  padding: const EdgeInsets.all(28),
-                  child: Container(
-                    width: 110,
-                    height: 110,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [AppColors.icePrimary, AppColors.iceSecondary],
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.document_scanner,
-                      color: Colors.white,
-                      size: 64,
-                    ),
+                child: Container(
+                  width: 112,
+                  height: 112,
+                  decoration: BoxDecoration(
+                    color: accent,
+                    borderRadius: BorderRadius.circular(26),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.document_scanner_outlined,
+                    color: Colors.white,
+                    size: 60,
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 36),
+            const SizedBox(height: 32),
             FadeTransition(
               opacity: _fade,
               child: Column(
@@ -138,12 +131,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     AppConfig.appName,
                     style: TextStyle(
                       fontSize: 34,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 2,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -1,
                       color: textColor,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Text(
                     'AI Destekli Resmi Belge Asistanı',
                     style: TextStyle(fontSize: 16, color: subColor),
@@ -151,25 +144,25 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 ],
               ),
             ),
-            const SizedBox(height: 72),
+            const SizedBox(height: 64),
             FadeTransition(
               opacity: _fade,
-              child: const SizedBox(
-                width: 42,
-                height: 42,
+              child: SizedBox(
+                width: 32,
+                height: 32,
                 child: CircularProgressIndicator(
                   strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.icePrimary),
+                  valueColor: AlwaysStoppedAnimation<Color>(accent),
                   backgroundColor: Colors.transparent,
                 ),
               ),
             ),
-            const SizedBox(height: 48),
+            const SizedBox(height: 40),
             FadeTransition(
               opacity: _fade,
               child: Text(
                 'v${AppConfig.appVersion}',
-                style: TextStyle(fontSize: 12, color: subColor),
+                style: TextStyle(fontSize: 13, color: subColor),
               ),
             ),
           ],

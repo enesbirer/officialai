@@ -27,8 +27,8 @@ class PrimaryButton extends StatelessWidget {
     this.variant = PrimaryButtonVariant.filled,
     this.color,
     this.textColor,
-    this.fontSize = 16,
-    this.borderRadius = 14,
+    this.fontSize = 17,
+    this.borderRadius = 12,
     this.padding,
     this.elevation,
   });
@@ -36,18 +36,20 @@ class PrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = color ?? AppColors.icePrimary;
+    final accent = isDark ? AppColors.accentDark : AppColors.accent;
+    final bgColor = color ?? accent;
     final fgColor = textColor ?? Colors.white;
-    final effectivePadding = padding ?? const EdgeInsets.symmetric(vertical: 16, horizontal: 22);
+    final effectivePadding = padding ?? const EdgeInsets.symmetric(vertical: 14, horizontal: 20);
     final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(borderRadius));
 
     final effectiveChild = loading
         ? SizedBox(
-            height: 24, width: 24,
+            height: 22,
+            width: 22,
             child: CircularProgressIndicator(
-              strokeWidth: 2.6,
+              strokeWidth: 2.4,
               valueColor: AlwaysStoppedAnimation<Color>(
-                variant == PrimaryButtonVariant.outlined ? bgColor : fgColor,
+                variant == PrimaryButtonVariant.outlined ? accent : fgColor,
               ),
             ),
           )
@@ -56,16 +58,16 @@ class PrimaryButton extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 20, color: variant == PrimaryButtonVariant.outlined ? bgColor : fgColor),
+                Icon(icon, size: 20, color: variant == PrimaryButtonVariant.outlined ? accent : fgColor),
                 const SizedBox(width: 8),
               ],
               Text(
                 text,
                 style: TextStyle(
                   fontSize: fontSize,
-                  fontWeight: FontWeight.w700,
-                  color: variant == PrimaryButtonVariant.outlined ? bgColor : fgColor,
-                  letterSpacing: 0.2,
+                  fontWeight: FontWeight.w600,
+                  color: variant == PrimaryButtonVariant.outlined ? accent : fgColor,
+                  letterSpacing: 0,
                 ),
               ),
             ],
@@ -76,9 +78,11 @@ class PrimaryButton extends StatelessWidget {
     if (variant == PrimaryButtonVariant.glass) {
       button = GlassContainer(
         backgroundColor: isDark
-            ? AppColors.darkGlass.withAlpha(180)
-            : AppColors.lightGlassStrong.withAlpha(200),
+            ? const Color(0xFF1C1C1E).withValues(alpha: 0.75)
+            : Colors.white.withValues(alpha: 0.80),
         borderRadius: borderRadius,
+        blurX: 30,
+        blurY: 30,
         onTap: loading ? null : onPressed,
         padding: effectivePadding,
         child: Center(child: effectiveChild),
@@ -88,11 +92,11 @@ class PrimaryButton extends StatelessWidget {
         onPressed: loading ? null : onPressed,
         style: OutlinedButton.styleFrom(
           padding: effectivePadding,
-          minimumSize: expanded ? const Size(double.infinity, 52) : null,
+          minimumSize: expanded ? const Size(double.infinity, 50) : const Size(44, 50),
           shape: shape,
-          foregroundColor: bgColor,
-          side: BorderSide(color: bgColor, width: 1.5),
-          textStyle: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w700),
+          foregroundColor: accent,
+          side: BorderSide(color: accent, width: 1.5),
+          textStyle: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600),
         ),
         child: effectiveChild,
       );
@@ -101,21 +105,19 @@ class PrimaryButton extends StatelessWidget {
         onPressed: loading ? null : onPressed,
         style: ElevatedButton.styleFrom(
           padding: effectivePadding,
-          minimumSize: expanded ? const Size(double.infinity, 52) : null,
+          minimumSize: expanded ? const Size(double.infinity, 50) : const Size(44, 50),
           backgroundColor: bgColor,
           foregroundColor: fgColor,
-          disabledBackgroundColor: bgColor.withAlpha(100),
+          disabledBackgroundColor: bgColor.withValues(alpha: 0.40),
           shape: shape,
           elevation: elevation ?? 0,
-          shadowColor: bgColor.withAlpha(120),
-          textStyle: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w700, letterSpacing: 0.2),
+          shadowColor: Colors.transparent,
+          textStyle: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600),
         ),
         child: effectiveChild,
       );
     }
 
-    return expanded && variant != PrimaryButtonVariant.filled
-        ? SizedBox(width: double.infinity, child: button)
-        : button;
+    return expanded ? SizedBox(width: double.infinity, child: button) : button;
   }
 }

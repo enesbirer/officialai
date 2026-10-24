@@ -16,17 +16,17 @@ class _OnboardItem {
 
 const List<_OnboardItem> _items = [
   _OnboardItem(
-    Icons.description,
+    Icons.description_outlined,
     'Akıllı Dilekçe Üretimi',
     '10+ kategoride profesyonel Türkçe dilekçe oluştur. İş, kira, trafik, vergi, sağlık ve daha fazlası tek tıkla hazır.',
   ),
   _OnboardItem(
-    Icons.email_outlined,
+    Icons.mail_outline_rounded,
     'E-posta & CV Oluşturucu',
     'Resmi, iş, akademik veya başvuru e-postalarını ve ATS uyumlu özgeçmişleri yapay zeka ile tasarla.',
   ),
   _OnboardItem(
-    Icons.document_scanner,
+    Icons.document_scanner_outlined,
     'OCR & Akıllı Sohbet',
     'Belgelerini tara, yapay zeka ile analiz ettir. Uzman desteğiyle her konuda sohbet et.',
   ),
@@ -71,6 +71,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final sub = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: isDark
           ? GlassBackground.iceDarkGradient(child: _buildBody(text, sub))
           : GlassBackground.iceLightGradient(child: _buildBody(text, sub)),
@@ -78,34 +79,37 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Widget _buildBody(Color text, Color sub) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = isDark ? AppColors.accentDark : AppColors.accent;
+
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
         child: Column(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  AppConfig.appName,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.2,
-                    color: AppColors.icePrimary,
-                  ),
-                ),
-                if (_index < _items.length - 1)
-                  TextButton(
-                    onPressed: _skip,
-                    child: const Text(
-                      'Atla',
-                      style: TextStyle(fontWeight: FontWeight.w700),
+            SizedBox(
+              height: 44,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    AppConfig.appName,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.4,
+                      color: text,
                     ),
                   ),
-              ],
+                  if (_index < _items.length - 1)
+                    TextButton(
+                      onPressed: _skip,
+                      child: const Text('Atla'),
+                    ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             Expanded(
               child: PageView.builder(
                 controller: _ctrl,
@@ -114,33 +118,38 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 itemBuilder: (context, i) {
                   final item = _items[i];
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        GlassContainer(
-                          borderRadius: 36,
-                          padding: const EdgeInsets.all(36),
-                          child: Icon(item.icon,
-                              size: 110, color: AppColors.icePrimary),
+                        Container(
+                          width: 140,
+                          height: 140,
+                          decoration: BoxDecoration(
+                            color: accent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(32),
+                          ),
+                          alignment: Alignment.center,
+                          child: Icon(item.icon, size: 68, color: accent),
                         ),
-                        const SizedBox(height: 44),
+                        const SizedBox(height: 40),
                         Text(
                           item.title,
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.6,
                             color: text,
                           ),
                         ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 12),
                         Text(
                           item.description,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 16,
-                            height: 1.6,
+                            height: 1.5,
                             color: sub,
                           ),
                         ),
@@ -157,24 +166,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 _items.length,
                 (i) => AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 5),
-                  width: _index == i ? 30 : 10,
-                  height: 10,
+                  curve: Curves.easeOut,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  width: _index == i ? 22 : 8,
+                  height: 8,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(999),
-                    color: _index == i
-                        ? AppColors.icePrimary
-                        : (AppColors.icePrimary.withAlpha(70)),
+                    color: _index == i ? accent : accent.withValues(alpha: 0.22),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
             PrimaryButton(
               text: _index == _items.length - 1 ? 'Başla' : 'İleri',
-              icon: _index == _items.length - 1
-                  ? Icons.rocket_launch_rounded
-                  : Icons.arrow_forward_rounded,
               onPressed: _next,
             ),
           ],

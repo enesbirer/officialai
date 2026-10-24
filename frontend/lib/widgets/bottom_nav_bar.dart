@@ -1,77 +1,109 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../core/theme/app_theme.dart';
 
-class BottomNavBar extends StatefulWidget {
+class BottomNavBar extends StatelessWidget {
   final int currentIndex;
 
   const BottomNavBar({super.key, required this.currentIndex});
 
-  @override
-  State<BottomNavBar> createState() => _BottomNavBarState();
-}
-
-class _BottomNavBarState extends State<BottomNavBar> {
-  void _onTap(int index) {
+  void _onTap(BuildContext context, int index) {
     switch (index) {
-      case 0: context.go('/dashboard'); break;
-      case 1: context.go('/chat'); break;
-      case 2: context.go('/history'); break;
-      case 3: context.go('/favorites'); break;
-      case 4: context.go('/profile'); break;
+      case 0:
+        context.go('/dashboard');
+        break;
+      case 1:
+        context.go('/chat');
+        break;
+      case 2:
+        context.go('/history');
+        break;
+      case 3:
+        context.go('/favorites');
+        break;
+      case 4:
+        context.go('/profile');
+        break;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-      child: GlassContainer(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-        borderRadius: 26,
-        blurX: 22,
-        blurY: 22,
-        child: SafeArea(
-          top: false,
-          child: NavigationBar(
-            selectedIndex: widget.currentIndex,
-            onDestinationSelected: _onTap,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            surfaceTintColor: Colors.transparent,
-            height: 62,
-            indicatorColor: AppColors.icePrimary.withAlpha(55),
-            indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined, size: 26),
-                selectedIcon: Icon(Icons.home, size: 26, color: Colors.white),
-                label: 'Ana Sayfa',
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = isDark ? AppColors.accentDark : AppColors.accent;
+    final inactive = isDark ? AppColors.darkTextHint : AppColors.lightTextHint;
+    final barColor = (isDark ? const Color(0xFF1C1C1E) : Colors.white).withValues(alpha: 0.82);
+    final separator = isDark ? AppColors.darkBorder : AppColors.lightBorder;
+
+    const items = <_NavItem>[
+      _NavItem(icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Ana Sayfa'),
+      _NavItem(icon: Icons.chat_bubble_outline, activeIcon: Icons.chat_bubble, label: 'Sohbet'),
+      _NavItem(icon: Icons.history_outlined, activeIcon: Icons.history, label: 'Geçmiş'),
+      _NavItem(icon: Icons.favorite_border, activeIcon: Icons.favorite, label: 'Favoriler'),
+      _NavItem(icon: Icons.person_outline, activeIcon: Icons.person, label: 'Profil'),
+    ];
+
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30, tileMode: TileMode.clamp),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: barColor,
+            border: Border(top: BorderSide(color: separator, width: 0.5)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              height: 52,
+              child: Row(
+                children: [
+                  for (var i = 0; i < items.length; i++)
+                    Expanded(
+                      child: Semantics(
+                        button: true,
+                        selected: currentIndex == i,
+                        label: items[i].label,
+                        child: InkWell(
+                          onTap: () => _onTap(context, i),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                currentIndex == i ? items[i].activeIcon : items[i].icon,
+                                size: 26,
+                                color: currentIndex == i ? accent : inactive,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                items[i].label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: currentIndex == i ? FontWeight.w600 : FontWeight.w500,
+                                  color: currentIndex == i ? accent : inactive,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
-              NavigationDestination(
-                icon: Icon(Icons.chat_bubble_outline_rounded, size: 26),
-                selectedIcon: Icon(Icons.chat_bubble, size: 26, color: Colors.white),
-                label: 'Sohbet',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.history_outlined, size: 26),
-                selectedIcon: Icon(Icons.history, size: 26, color: Colors.white),
-                label: 'Geçmiş',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.favorite_border, size: 26),
-                selectedIcon: Icon(Icons.favorite, size: 26, color: Colors.white),
-                label: 'Favoriler',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.person_outline, size: 26),
-                selectedIcon: Icon(Icons.person, size: 26, color: Colors.white),
-                label: 'Profil',
-              ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+class _NavItem {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+
+  const _NavItem({required this.icon, required this.activeIcon, required this.label});
 }

@@ -46,3 +46,5 @@ frontend/build_runner_cmd.log
 
 # APK
 frontend/build/app/outputs/flutter-apk/*.apk
+OfficialAI-release.apk
+_flutter_log.txt

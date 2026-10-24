@@ -44,7 +44,6 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
     String? firstName,
     String? lastName,
   }) async {
-    final prev = state;
     state = const AsyncValue.loading();
     try {
       final result = await _repo.register(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/app_navigation.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../widgets/bottom_nav_bar.dart';
 import '../../../providers/ai_provider.dart';
@@ -10,8 +11,7 @@ class _Stat {
   final String label;
   final String value;
   final IconData icon;
-  final Color color;
-  const _Stat(this.label, this.value, this.icon, this.color);
+  const _Stat(this.label, this.value, this.icon);
 }
 
 class _Action {
@@ -19,28 +19,21 @@ class _Action {
   final String subtitle;
   final IconData icon;
   final String route;
-  final Color gradient1;
-  final Color gradient2;
-  const _Action(
-      this.title, this.subtitle, this.icon, this.route, this.gradient1, this.gradient2);
+  const _Action(this.title, this.subtitle, this.icon, this.route);
 }
 
 const List<_Action> _actions = [
-  _Action('Dilekçe Üret', '10+ kategoride AI dilekçe', Icons.description_outlined, '/petition',
-      Color(0xFF0077B6), Color(0xFF00A8E1)),
-  _Action('E-posta Yaz', 'Resmi/İş/Özel/BAşvuru', Icons.email_outlined, '/email', Color(0xFF028090),
-      Color(0xFF48CAE4)),
-  _Action('CV Hazırla', 'ATS uyumlu modern CV', Icons.badge_outlined, '/cv', Color(0xFF168AAD),
-      Color(0xFF90E0EF)),
-  _Action('Belge Tara', 'OCR ile analiz ettir', Icons.document_scanner_outlined, '/scanner',
-      Color(0xFF00B4D8), Color(0xFFCAF0F8)),
+  _Action('Dilekçe Üret', '10+ kategoride AI dilekçe', Icons.description_outlined, '/petition'),
+  _Action('E-posta Yaz', 'Resmi / İş / Özel / Başvuru', Icons.mail_outline_rounded, '/email'),
+  _Action('CV Hazırla', 'ATS uyumlu modern CV', Icons.badge_outlined, '/cv'),
+  _Action('Belge Tara', 'OCR ile analiz ettir', Icons.document_scanner_outlined, '/scanner'),
 ];
 
 const List<_Stat> _demoStats = [
-  _Stat('Dilekçe', '0', Icons.description, AppColors.icePrimary),
-  _Stat('E-posta', '0', Icons.email, AppColors.iceAccent),
-  _Stat('CV', '0', Icons.badge, AppColors.iceSecondary),
-  _Stat('Favori', '0', Icons.favorite, Color(0xFFF472B6)),
+  _Stat('Dilekçe', '0', Icons.description_outlined),
+  _Stat('E-posta', '0', Icons.mail_outline_rounded),
+  _Stat('CV', '0', Icons.badge_outlined),
+  _Stat('Favori', '0', Icons.favorite_border),
 ];
 
 class DashboardScreen extends ConsumerWidget {
@@ -54,6 +47,7 @@ class DashboardScreen extends ConsumerWidget {
     final docs = ref.watch(documentsProvider(null));
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: isDark
           ? GlassBackground.iceDarkGradient(child: _buildBody(context, ref, user, docs, isDark))
           : GlassBackground.iceLightGradient(child: _buildBody(context, ref, user, docs, isDark)),
@@ -65,100 +59,106 @@ class DashboardScreen extends ConsumerWidget {
       AsyncValue<List<Map>> docs, bool isDark) {
     final text = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
     final sub = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final accent = isDark ? AppColors.accentDark : AppColors.accent;
     final name = (user?.firstName as String?) ?? 'Değerli';
 
     return SafeArea(
       bottom: false,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // AppBar
+            // Başlık
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Hoş geldin, $name 👋',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: text,
-                              )),
+                      Text(
+                        'Hoş geldin, $name',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.8,
+                          color: text,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text('Bugün ne yapmak istersin?',
-                          style: TextStyle(color: sub, fontSize: 14)),
+                      Text(
+                        'Bugün ne yapmak istersin?',
+                        style: TextStyle(fontSize: 15, color: sub),
+                      ),
                     ],
                   ),
                 ),
-                GlassContainer(
-                  padding: const EdgeInsets.all(10),
-                  borderRadius: 18,
+                _IconButton(
+                  icon: Icons.settings_outlined,
+                  color: text,
                   onTap: () => context.push('/settings'),
-                  child: const Icon(Icons.settings_outlined, size: 24),
                 ),
-                const SizedBox(width: 10),
-                GlassContainer(
-                  padding: const EdgeInsets.all(10),
-                  borderRadius: 18,
+                const SizedBox(width: 4),
+                _IconButton(
+                  icon: Icons.support_agent_outlined,
+                  color: accent,
                   onTap: () => context.push('/chat'),
-                  child:
-                      const Icon(Icons.support_agent_outlined, size: 24, color: AppColors.icePrimary),
                 ),
               ],
             ),
             const SizedBox(height: 28),
 
-            // Quick Actions
-            Row(
-              children: [
-                Text('Hızlı İşlemler',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: text,
-                        )),
-              ],
-            ),
-            const SizedBox(height: 14),
+            // Hızlı İşlemler
+            _sectionTitle('Hızlı İşlemler', text),
+            const SizedBox(height: 12),
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                mainAxisSpacing: 14,
-                crossAxisSpacing: 14,
-                childAspectRatio: 1.05,
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 16,
+                childAspectRatio: 1.0,
               ),
               itemCount: _actions.length,
               itemBuilder: (_, i) {
                 final a = _actions[i];
                 return GlassContainer(
-                  onTap: () => context.go(a.route),
-                  borderRadius: 24,
-                  padding: const EdgeInsets.all(14),
+                  onTap: () => AppNavigation.push(context, a.route),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        width: 48,
-                        height: 48,
+                        width: 44,
+                        height: 44,
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [a.gradient1, a.gradient2]),
+                          color: accent.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(a.icon, color: Colors.white, size: 26),
+                        alignment: Alignment.center,
+                        child: Icon(a.icon, color: accent, size: 24),
                       ),
                       const Spacer(),
-                      Text(a.title,
-                          style: TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.w800, color: text)),
+                      Text(
+                        a.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.2,
+                          color: text,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text(a.subtitle,
-                          style: TextStyle(color: sub, fontSize: 11, height: 1.35)),
+                      Text(
+                        a.subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: sub, fontSize: 13, height: 1.3),
+                      ),
                     ],
                   ),
                 );
@@ -166,39 +166,39 @@ class DashboardScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 28),
 
-            // Stats
-            Row(
-              children: [
-                Text('İstatistikler',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: text,
-                        )),
-              ],
-            ),
-            const SizedBox(height: 14),
+            // İstatistikler
+            _sectionTitle('İstatistikler', text),
+            const SizedBox(height: 12),
             SizedBox(
-              height: 120,
+              height: 108,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
+                clipBehavior: Clip.none,
                 itemCount: _demoStats.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 12),
                 itemBuilder: (_, i) {
                   final s = _demoStats[i];
                   return GlassContainer(
-                    width: 150,
-                    borderRadius: 22,
-                    padding: const EdgeInsets.all(14),
+                    width: 140,
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(s.icon, color: s.color, size: 26),
+                        Icon(s.icon, color: accent, size: 22),
                         const Spacer(),
-                        Text(s.value,
-                            style: TextStyle(
-                                fontSize: 26, fontWeight: FontWeight.w800, color: text)),
-                        Text(s.label,
-                            style: TextStyle(color: sub, fontSize: 12, fontWeight: FontWeight.w600)),
+                        Text(
+                          s.value,
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.5,
+                            color: text,
+                          ),
+                        ),
+                        Text(
+                          s.label,
+                          style: TextStyle(color: sub, fontSize: 13),
+                        ),
                       ],
                     ),
                   );
@@ -207,161 +207,219 @@ class DashboardScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 28),
 
-            // Recent Docs
+            // Son Dokümanlar
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Son Dokümanlar',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: text,
-                        )),
+                _sectionTitle('Son Dokümanlar', text),
                 TextButton(
                   onPressed: () => context.go('/history'),
-                  child: const Text('Tümü', style: TextStyle(fontWeight: FontWeight.w700)),
+                  child: const Text('Tümü'),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 4),
             docs.when(
-              loading: () => _placeholderRecent(sub, isDark),
-              error: (_, __) => _placeholderRecent(sub, isDark),
+              loading: () => _placeholderRecent(sub),
+              error: (_, __) => _placeholderRecent(sub),
               data: (list) {
-                if (list.isEmpty) return _emptyState(text, sub);
-                return Column(
-                  children: List.generate(
-                    list.length > 4 ? 4 : list.length,
-                    (i) {
-                      final d = list[i];
-                      return _docTile(d, sub, text, context);
-                    },
+                if (list.isEmpty) return _emptyState(text, sub, accent);
+                final items = list.take(4).toList();
+                return GlassContainer(
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < items.length; i++) ...[
+                        if (i > 0) const GlassDivider(height: 1, indent: 72),
+                        _docTile(items[i], sub, text, accent, context),
+                      ],
+                    ],
                   ),
                 );
               },
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
 
-  Widget _placeholderRecent(Color sub, bool isDark) {
-    return Column(
-      children: List.generate(
-        3,
-        (_) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: GlassContainer(
-            borderRadius: 18,
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: AppColors.icePrimary.withAlpha(30),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(height: 14, width: 160, color: sub.withAlpha(40)),
-                      const SizedBox(height: 6),
-                      Container(height: 12, width: 100, color: sub.withAlpha(25)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+  Widget _sectionTitle(String title, Color text) {
+    return Text(
+      title,
+      style: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.4,
+        color: text,
       ),
     );
   }
 
-  Widget _emptyState(Color text, Color sub) {
+  Widget _placeholderRecent(Color sub) {
     return GlassContainer(
-      width: double.infinity,
-      borderRadius: 22,
-      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: List.generate(3, (i) {
+          return Column(
+            children: [
+              if (i > 0) const GlassDivider(height: 1, indent: 72),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: sub.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            height: 14,
+                            width: 160,
+                            decoration: BoxDecoration(
+                              color: sub.withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            height: 12,
+                            width: 100,
+                            decoration: BoxDecoration(
+                              color: sub.withValues(alpha: 0.10),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _emptyState(Color text, Color sub, Color accent) {
+    return GlassContainer(
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
       child: Column(
         children: [
-          const Icon(Icons.inbox_outlined, size: 48, color: AppColors.icePrimary),
+          Icon(Icons.inbox_outlined, size: 44, color: accent),
           const SizedBox(height: 12),
-          Text('Henüz doküman oluşturmadınız',
-              style: TextStyle(fontWeight: FontWeight.w700, color: text, fontSize: 15)),
-          const SizedBox(height: 6),
-          Text('Hızlı işlemlerden birini seçerek başlayın',
-              style: TextStyle(color: sub, fontSize: 13)),
+          Text(
+            'Henüz doküman oluşturmadınız',
+            style: TextStyle(fontWeight: FontWeight.w600, color: text, fontSize: 16),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Hızlı işlemlerden birini seçerek başlayın',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: sub, fontSize: 13),
+          ),
         ],
       ),
     );
   }
 
-  Widget _docTile(Map d, Color sub, Color text, BuildContext context) {
+  Widget _docTile(Map d, Color sub, Color text, Color accent, BuildContext context) {
     final title = d['title']?.toString() ?? 'Doküman';
     final type = d['documentType']?.toString() ?? 'petition';
     final createdAt = d['createdAt']?.toString() ?? '';
-    IconData icon = Icons.description;
-    Color col = AppColors.icePrimary;
+    IconData icon = Icons.description_outlined;
     switch (type) {
       case 'email':
-        icon = Icons.email;
-        col = AppColors.iceAccent;
+        icon = Icons.mail_outline_rounded;
         break;
       case 'cv':
-        icon = Icons.badge;
-        col = AppColors.iceSecondary;
+        icon = Icons.badge_outlined;
         break;
       case 'ocr':
-        icon = Icons.document_scanner;
-        col = const Color(0xFF168AAD);
+        icon = Icons.document_scanner_outlined;
         break;
     }
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: GlassContainer(
-        onTap: () {
-          if (type == 'petition') context.go('/petition');
-          if (type == 'email') context.go('/email');
-          if (type == 'cv') context.go('/cv');
-        },
-        borderRadius: 18,
-        padding: const EdgeInsets.all(12),
+    return InkWell(
+      onTap: () {
+        if (type == 'petition') AppNavigation.push(context, '/petition');
+        if (type == 'email') AppNavigation.push(context, '/email');
+        if (type == 'cv') AppNavigation.push(context, '/cv');
+        if (type == 'ocr') AppNavigation.push(context, '/scanner');
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
             Container(
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: col.withAlpha(40),
+                color: accent.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: col, size: 22),
+              alignment: Alignment.center,
+              child: Icon(icon, color: accent, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontWeight: FontWeight.w700, color: text)),
-                  const SizedBox(height: 4),
                   Text(
-                      '${type.toUpperCase()} • ${createdAt.isNotEmpty ? createdAt.substring(0, 10) : ''}',
-                      style: TextStyle(color: sub, fontSize: 12)),
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 16,
+                      color: text,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${type.toUpperCase()} • ${createdAt.isNotEmpty ? createdAt.substring(0, 10) : ''}',
+                    style: TextStyle(color: sub, fontSize: 13),
+                  ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.icePrimary),
+            Icon(Icons.chevron_right_rounded, color: sub, size: 22),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _IconButton extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _IconButton({required this.icon, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: onTap,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Icon(icon, color: color, size: 24),
         ),
       ),
     );
