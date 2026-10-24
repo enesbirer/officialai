@@ -26,6 +26,16 @@ export const config = {
   ai: {
     provider: process.env.AI_PROVIDER || "gemini",
     geminiApiKey: process.env.GEMINI_API_KEY || "",
+    // Gemini model adları TEK noktadan yönetilir. Kullanımdan kaldırılan
+    // modeller (gemini-2.0-flash, gemini-2.5-flash vb.) 404 döndürdüğü için
+    // birincil model + yedek model listesi birlikte kullanılır.
+    geminiModel: process.env.GEMINI_MODEL || "gemini-3.8-flash",
+    geminiFallbackModels: (
+      process.env.GEMINI_MODEL_FALLBACKS || "gemini-3.6-flash,gemini-3.5-flash,gemini-3.5-flash-lite"
+    )
+      .split(",")
+      .map((m) => m.trim())
+      .filter(Boolean),
   },
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || "",

@@ -1,8 +1,9 @@
 import app from "./app";
 import { config } from "./config";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+// Uygulama genelinde TEK PrismaClient kullanılır (config/prisma).
+// Ayrı bir istemci oluşturmak ikinci bir bağlantı havuzu açar ve
+// PostgreSQL/Neon bağlantılarının boşta kapanmasına (kind: Closed) yol açar.
+import prisma from "./config/prisma";
 
 // Backend başlarken kategori verisi yoksa otomatik seed çalıştır
 async function autoSeedIfEmpty() {

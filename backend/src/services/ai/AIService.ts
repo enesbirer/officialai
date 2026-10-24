@@ -68,9 +68,35 @@ export class AIService {
   }
 
   async getPetitionCategories() {
-    return prisma.petitionCategory.findMany({
+    const categories = await prisma.petitionCategory.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
+      include: {
+        templates: {
+          where: { isActive: true },
+          orderBy: { createdAt: "asc" },
+          take: 1,
+        },
+      },
+    });
+
+    // Şablon yapısındaki alanları (structure.fields) istemciye uygun bir
+    // listeye dönüştür. Alan tanımı olmayan kategorilerde boş liste döner
+    // ve istemci kendi yedek alanlarını kullanır.
+    return categories.map((category) => {
+      const structure = (category.templates?.[0]?.structure ?? {}) as {
+        fields?: Record<string, string>;
+      };
+      const rawFields = structure.fields ?? {};
+      const fields = Object.entries(rawFields).map(([key, label]) => ({
+        key,
+        label: String(label),
+        required: !OPTIONAL_FIELD_PATTERN.test(key),
+        type: fieldTypeFor(key),
+      }));
+
+      const { templates: _templates, ...rest } = category;
+      return { ...rest, fields };
     });
   }
 
@@ -640,6 +666,20 @@ ${customInstructions ? `Ekstra Talimatlar: ${customInstructions}` : ""}
     if (!conv) throw new Error("Conversation not found");
     return { conversation: conv, messages: conv.messages };
   }
+}
+
+// Zorunlu olmayan (opsiyonel) alan anahtarları.
+const OPTIONAL_FIELD_PATTERN =
+  /telefon|eposta|e-posta|_no$|^karar_no|^siparis_no|^protokol_no|ekler|vekil|veli|bolum|sinif|varsa/i;
+
+// Uzun metin (çok satırlı) alanlar.
+const LONGTEXT_FIELD_PATTERN =
+  /adres|gerekce|aciklama|olay|detay|tarihce|sorun|neden|hukuki|kanit|talep|dayanak|talep_edilenler|istenen|uyusmazlik/i;
+
+function fieldTypeFor(key: string): "text" | "longtext" | "email" {
+  if (/eposta|e-posta/i.test(key)) return "email";
+  if (LONGTEXT_FIELD_PATTERN.test(key)) return "longtext";
+  return "text";
 }
 
 interface OcrStructured {

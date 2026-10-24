@@ -153,7 +153,7 @@ app.use(errorHandler);
 
 // 404
 app.use((req, res) => {
-  res.status(404).json({ success: false, error: "Route bulunamadı", path: req.originalUrl });
+  res.status(404).json({ success: false, message: "İstenen adres bulunamadı." });
 });
 
 export default app;
