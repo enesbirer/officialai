@@ -43,6 +43,7 @@ frontend/build_runner_cmd.log
 # Cache
 .cache/
 .storage/
+frontend/.pub_cache/
 
 # APK
 frontend/build/app/outputs/flutter-apk/*.apk
