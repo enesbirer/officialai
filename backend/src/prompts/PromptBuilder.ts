@@ -48,7 +48,9 @@ export class PromptBuilder {
 
     finalSystem += `\n\n=== ÖZEL TALİMAT ===
 - Kullanıcıya yardımcı ol; KISA, sade ve doğrudan yanıt ver, gereksiz uzatma
-- Yukarıda belirli bir çıktı biçimi/etiket yapısı istenmişse ona uy; istenmemişse düz metin yaz
+- Cevabı ilk cümlede ver; giriş/kapanış kalıbı ("Harika soru", "Umarım yardımcı olmuştur") yazma
+- DÜZ METİN yaz; markdown biçimi (# başlık, **kalın**, tablo, --- çizgi) ve emoji kullanma
+- Yukarıda belirli bir çıktı biçimi/etiket yapısı istenmişse ona uy; istenmemişse düz paragraf yaz
 - Eksik bilgi için uydurma yapma; ilgili alanı boş bırak veya atla
 - TÜRKÇE KARAKTERLERİ (ğşıüöç) DOĞRU KULLAN`;
 

@@ -146,6 +146,24 @@ export class GeminiProvider implements AIProvider {
     throw lastError;
   }
 
+  /**
+   * Model üretim ayarları tek noktadan yönetilir.
+   *
+   * `maxOutputTokens` gemini-3.x modellerinde "düşünme" (thinking) token'larını
+   * da kapsar. 8192 verildiğinde model yaklaşık 8000 token düşünüp yanıtları
+   * 2-3 dakikaya kadar uzatıyordu (kullanıcı bu yüzden "oluşturmuyor" sanıyordu).
+   * Belgelerimiz en fazla 1-2 sayfa olduğundan 2048 hem kaliteyi korur hem de
+   * yanıt süresini belirgin biçimde kısaltır.
+   */
+  private generationConfig() {
+    return {
+      temperature: 0.7,
+      topP: 0.95,
+      topK: 40,
+      maxOutputTokens: 2048,
+    };
+  }
+
   private getSafetySettings() {
     return [
       {
@@ -181,12 +199,7 @@ export class GeminiProvider implements AIProvider {
           const model = genAI.getGenerativeModel({
             model: modelName,
             safetySettings: this.getSafetySettings(),
-            generationConfig: {
-              temperature: 0.7,
-              topP: 0.95,
-              topK: 40,
-              maxOutputTokens: 8192,
-            },
+            generationConfig: this.generationConfig(),
           });
           return model.generateContent({
             contents: [
@@ -251,12 +264,7 @@ export class GeminiProvider implements AIProvider {
         const model = genAI.getGenerativeModel({
           model: modelName,
           safetySettings: this.getSafetySettings(),
-          generationConfig: {
-            temperature: 0.7,
-            topP: 0.95,
-            topK: 40,
-            maxOutputTokens: 8192,
-          },
+          generationConfig: this.generationConfig(),
         });
         streamResult = await model.generateContentStream({
           contents: [

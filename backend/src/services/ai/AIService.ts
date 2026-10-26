@@ -136,6 +136,8 @@ export class AIService {
 Aşağıdaki bilgilerle KISA ve ÖZ bir resmi dilekçe oluştur.
 
 Kategori: ${categoryName}
+Bugünün tarihi: ${todayInTurkish()} (dilekçe tarihi olarak SADECE bu tarihi kullan, başka tarih uydurma)
+
 Kullanıcı Cevapları / Bilgileri:
 ${Object.entries(answers)
   .map(([key, value]) => `- ${key}: ${value}`)
@@ -263,6 +265,7 @@ Ton / Üslup: ${tone}
 Dil: ${language}
 Muhatap / Alıcı: ${recipient || "[Alıcı belirtilecek]"}
 Gönderen Adı: ${senderName || "[Gönderen adı belirtilecek]"}
+Bugünün tarihi: ${todayInTurkish()} (tarih gerekiyorsa SADECE bunu kullan)
 Bağlam / İçerik Açıklaması: ${context}
 
 Tüm formatı koru: Konu, selamlama, açılış, gövde 1-2 paragraf, çağrı noktası, kapanış, imza.
@@ -511,11 +514,15 @@ ${customInstructions ? `Ekstra Talimatlar: ${customInstructions}` : ""}
     const response = await this.provider.generate(systemPrompt, userPrompt);
     const processingTime = Date.now() - startTime;
 
+    // Uygulamada markdown işleyici yok: model yine de markdown üretirse
+    // ekranda ham görünür. Bu yüzden sohbet yanıtı düz metne indirgenir.
+    const answer = toPlainText(response.content);
+
     const assistantMsg = await prisma.aIMessage.create({
       data: {
         conversationId: workingConversationId,
         role: "assistant",
-        content: response.content,
+        content: answer,
       },
     });
 
@@ -524,14 +531,14 @@ ${customInstructions ? `Ekstra Talimatlar: ${customInstructions}` : ""}
       type: "chat",
       systemPrompt,
       userPrompt,
-      response: response.content,
+      response: answer,
       processingTime,
       tokensUsed: response.tokensUsed,
       conversationId: workingConversationId,
     });
 
     return {
-      content: response.content,
+      content: answer,
       conversationId: workingConversationId,
       messageId: assistantMsg.id,
     };
@@ -735,6 +742,51 @@ function safeFileName(title: string): string {
     .replace(/\s+/g, "_")
     .slice(0, 60);
   return base || "belge";
+}
+
+/** Bugünün tarihini Türkiye saatine göre GG.AA.YYYY biçiminde döndürür. */
+function todayInTurkish(): string {
+  try {
+    return new Intl.DateTimeFormat("tr-TR", {
+      timeZone: "Europe/Istanbul",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(new Date());
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
+/**
+ * Sohbet yanıtını düz metne indirger (markdown işaretlerini temizler).
+ * Uygulamada markdown işleyici olmadığı için '#' başlıklar veya '**kalın**'
+ * işaretleri ekranda ham metin olarak görünür; bu yüzden temizlenir.
+ */
+function toPlainText(text: string): string {
+  const normalized = text
+    .replace(/\r\n/g, "\n")
+    // '#' başlık işaretleri
+    .replace(/^[ \t]{0,3}#{1,6}[ \t]+/gm, "")
+    // **kalın** / __kalın__
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/__(.+?)__/g, "$1")
+    // *italik*
+    .replace(/(^|[\s(])\*(?!\s)([^*\n]+?)\*(?=[\s).,;:!?]|$)/g, "$1$2")
+    // '>' alıntı işareti
+    .replace(/^[ \t]{0,3}>[ \t]?/gm, "")
+    // `kod`
+    .replace(/`([^`\n]+)`/g, "$1")
+    // madde işaretlerini tek biçime indir
+    .replace(/^([ \t]*)[-*][ \t]+/gm, "$1- ");
+
+  return normalized
+    .split("\n")
+    // yalnızca '---', '***', '___' içeren ayırıcı satırları kaldır
+    .filter((line) => !/^[ \t]*([-*_])[ \t]*(\1[ \t]*){2,}$/.test(line))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 // Zorunlu olmayan (opsiyonel) alan anahtarları.
