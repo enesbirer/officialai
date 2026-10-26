@@ -6,6 +6,7 @@ import {
   loginSchema,
   refreshTokenSchema,
   verifyEmailSchema,
+  resendVerificationSchema,
 } from "../../validators/auth";
 
 export class AuthController {
@@ -29,6 +30,16 @@ export class AuthController {
     try {
       const { email, code } = verifyEmailSchema.parse(req.body);
       const result = await this.authService.verifyEmail(email, code);
+      res.status(HTTP_STATUS.OK).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async resendVerification(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email } = resendVerificationSchema.parse(req.body);
+      const result = await this.authService.resendVerificationCode(email);
       res.status(HTTP_STATUS.OK).json({ success: true, data: result });
     } catch (error) {
       next(error);

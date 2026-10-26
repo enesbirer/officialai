@@ -8,6 +8,7 @@ import {
   chatSchema,
   ocrAnalyzeSchema,
   toggleFavoriteSchema,
+  sendDocumentEmailSchema,
 } from "../../validators/ai";
 
 export class AIController {
@@ -84,6 +85,23 @@ export class AIController {
         content: h.content || ''
       }));
       const result = await this.aiService.chat(req.user!.id, message, typedHistory, conversationId);
+      res.status(HTTP_STATUS.OK).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async sendDocumentEmail(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { to, subject, message, title, content, pdfBase64 } = sendDocumentEmailSchema.parse(req.body);
+      const result = await this.aiService.sendDocumentByEmail(req.user!.id, {
+        to,
+        subject,
+        message,
+        title,
+        content,
+        pdfBase64,
+      });
       res.status(HTTP_STATUS.OK).json({ success: true, data: result });
     } catch (error) {
       next(error);

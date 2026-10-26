@@ -65,6 +65,12 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
     state = await AsyncValue.guard(() => _repo.verifyEmail(email, code));
   }
 
+  /// Doğrulama kodunu tekrar gönderir.
+  /// Sunucu log modundaysa dönen haritada `verificationCode` alanı bulunur.
+  Future<Map<String, dynamic>> resendVerificationCode(String email) async {
+    return _repo.resendVerificationCode(email);
+  }
+
   Future<void> logout() async {
     try {
       await _repo.logout();

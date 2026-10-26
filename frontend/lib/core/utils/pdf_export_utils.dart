@@ -37,11 +37,14 @@ class PdfExportUtils {
   }
 
   /// Belgeyi PDF baytlarına dönüştürür (önizleme/paylaşım için ortak yol).
+  ///
+  /// [signatureImage] verilirse belgenin sonuna ıslak imza görüntüsü eklenir.
   static Future<Uint8List> buildPdfBytes({
     required String title,
     required String content,
     String? subtitle,
     PdfPageFormat? format,
+    Uint8List? signatureImage,
   }) async {
     final doc = await _createDocument();
     final pageFormat = format ?? PdfPageFormat.a4;
@@ -74,6 +77,19 @@ class PdfExportUtils {
         ),
         build: (ctx) => [
           pw.Text(content, style: baseStyle(10.5)),
+          if (signatureImage != null && signatureImage.isNotEmpty) ...[
+            pw.SizedBox(height: 28),
+            pw.Text('İMZA', style: baseStyle(10.5, bold: true)),
+            pw.SizedBox(height: 8),
+            pw.Container(
+              alignment: pw.Alignment.centerLeft,
+              child: pw.Image(
+                pw.MemoryImage(signatureImage),
+                height: 90,
+                fit: pw.BoxFit.contain,
+              ),
+            ),
+          ],
         ],
         footer: (ctx) => pw.Container(
           alignment: pw.Alignment.centerRight,
@@ -107,6 +123,14 @@ class PdfExportUtils {
         '${now.minute.toString().padLeft(2, '0')}';
   }
 
+  /// Belge için kullanıcı dostu, güvenli bir dosya adı üretir.
+  static String buildFileName({
+    required String title,
+    String documentType = 'document',
+  }) {
+    return 'officialai_${documentType}_${_safeFileName(title)}_${_stamp()}.pdf';
+  }
+
   /// Belgeyi PDF olarak paylaşır/dışa aktarır (indirme, kaydetme, paylaşma).
   static Future<void> exportAndShare({
     required String title,
@@ -115,16 +139,30 @@ class PdfExportUtils {
     String? shareSubject,
     String documentType = 'document',
     PdfPageFormat? pageFormat,
+    Uint8List? signatureImage,
   }) async {
     final bytes = await buildPdfBytes(
       title: title,
       content: content,
       subtitle: subtitle,
       format: pageFormat,
+      signatureImage: signatureImage,
     );
 
-    final fileName = 'officialai_${documentType}_${_safeFileName(title)}_${_stamp()}.pdf';
+    final fileName = buildFileName(title: title, documentType: documentType);
 
+    try {
+      await Printing.sharePdf(bytes: bytes, filename: fileName);
+    } catch (_) {
+      await Printing.layoutPdf(onLayout: (_) async => bytes);
+    }
+  }
+
+  /// Hazır PDF baytlarını paylaşır/dışa aktarır.
+  static Future<void> sharePdfBytes({
+    required Uint8List bytes,
+    required String fileName,
+  }) async {
     try {
       await Printing.sharePdf(bytes: bytes, filename: fileName);
     } catch (_) {

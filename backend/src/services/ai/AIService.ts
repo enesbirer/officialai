@@ -12,6 +12,9 @@ import {
 } from "../../prompts/promptTemplates";
 import { config } from "../../config";
 import prisma from "../../config/prisma";
+import { EmailService } from "../email/EmailService";
+import { AppError } from "../../utils/errors";
+import { HTTP_STATUS } from "../../constants";
 
 interface CVData {
   personalInfo: any;
@@ -130,7 +133,7 @@ export class AIService {
     const builder = new PromptBuilder()
       .setSystemPrompt(PETITION_SYSTEM_PROMPT_BASE)
       .setUserPrompt(`
-Aşağıdaki bilgileri kullanarak TAM ve PROFESYONEL bir TÜRKÇE resmi dilekçe/dava dilekçesi oluştur.
+Aşağıdaki bilgilerle KISA ve ÖZ bir resmi dilekçe oluştur.
 
 Kategori: ${categoryName}
 Kullanıcı Cevapları / Bilgileri:
@@ -138,10 +141,10 @@ ${Object.entries(answers)
   .map(([key, value]) => `- ${key}: ${value}`)
   .join("\n")}
 
-${template ? `Şablon Yapısı (başvuru): ${JSON.stringify(template.structure)}` : ""}
+${template ? `Şablon referansı: ${JSON.stringify(template.structure)}` : ""}
 
-Tüm alanları doldur, eksik bilgi olursa mantıklı varsayım yap ve [BELİRTİNİZ] ile işaretle. 
-Tam formatı, tüm bölümleriyle birlikte ver. Başlık, muhatap, bilgiler, konu, açıklama, talep, dayanak, kanıt, imza, ekler, nüsha hepsi olsun.
+Kurallar: Yaklaşık 1 sayfa tut. Gereksiz yasal madde/anayasa maddesi ekleme, uydurma bilgi ekleme,
+sonuna yapay zekâ notu ekleme. Doğrudan dilekçe metnini yaz.
 `);
 
     if (category) builder.addPetitionCategory(categoryName, answers);
@@ -183,6 +186,62 @@ Tam formatı, tüm bölümleriyle birlikte ver. Başlık, muhatap, bilgiler, kon
       documentId: petition.id,
       title: petition.title,
     };
+  }
+
+  /**
+   * Oluşturulan belgeyi (dilekçe metni + isteğe bağlı PDF eki) e-posta olarak
+   * gönderir. Kullanıcı uygulamadan çıkmadan belgesini iletebilir.
+   */
+  async sendDocumentByEmail(
+    userId: string,
+    payload: {
+      to: string;
+      subject?: string;
+      message?: string;
+      title: string;
+      content: string;
+      pdfBase64?: string;
+    }
+  ): Promise<{ sent: boolean; to: string; message: string }> {
+    const emailService = new EmailService();
+
+    if (!emailService.isConfigured) {
+      throw new AppError(
+        "E-posta gönderim servisi şu anda yapılandırılmamış. Lütfen daha sonra tekrar deneyin.",
+        HTTP_STATUS.SERVICE_UNAVAILABLE
+      );
+    }
+
+    const subject = payload.subject?.trim() || payload.title;
+
+    const attachments = payload.pdfBase64
+      ? [
+          {
+            filename: `${safeFileName(payload.title)}.pdf`,
+            content: Buffer.from(payload.pdfBase64, "base64"),
+            contentType: "application/pdf",
+          },
+        ]
+      : undefined;
+
+    const sent = await emailService.sendDocumentEmail({
+      to: payload.to,
+      subject,
+      title: payload.title,
+      message: payload.message,
+      content: payload.content,
+      attachments,
+    });
+
+    if (!sent) {
+      throw new AppError(
+        "Belge e-posta ile gönderilemedi. Lütfen daha sonra tekrar deneyin.",
+        HTTP_STATUS.BAD_GATEWAY
+      );
+    }
+
+    console.log(`[AIService] Belge e-posta ile gönderildi (userId=${userId}) -> ${payload.to}`);
+    return { sent: true, to: payload.to, message: "Belge e-posta ile gönderildi" };
   }
 
   async generateEmail(
@@ -666,6 +725,16 @@ ${customInstructions ? `Ekstra Talimatlar: ${customInstructions}` : ""}
     if (!conv) throw new Error("Conversation not found");
     return { conversation: conv, messages: conv.messages };
   }
+}
+
+/** Başlıktan güvenli bir dosya adı üretir (Türkçe karakterler korunur). */
+function safeFileName(title: string): string {
+  const base = title
+    .replace(/[^\p{L}\p{N} _-]/gu, "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .slice(0, 60);
+  return base || "belge";
 }
 
 // Zorunlu olmayan (opsiyonel) alan anahtarları.

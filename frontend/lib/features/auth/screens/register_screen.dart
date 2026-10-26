@@ -27,8 +27,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _stageVerify = false;
   String? _registeredEmail;
 
+  /// Sunucu log modundayken dönen geçici doğrulama kodu (test amaçlı).
+  String? _devCode;
+  int _resendSeconds = 0;
+  Timer? _resendTimer;
+
   @override
   void dispose() {
+    _resendTimer?.cancel();
     _firstNameCtrl.dispose();
     _lastNameCtrl.dispose();
     _emailCtrl.dispose();
@@ -69,11 +75,52 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         setState(() {
           _stageVerify = true;
           _registeredEmail = _emailCtrl.text.trim();
+          _devCode = (result['verificationCode'] as String?)?.trim();
         });
+        if (_devCode != null && _devCode!.isNotEmpty) {
+          _codeCtrl.text = _devCode!;
+        }
+        _startResendCountdown();
         _snack(result['message'] ?? 'Doğrulama kodu gönderildi');
       }
     } catch (e) {
       if (mounted) _snack('Kayıt başarısız: ${_err(e)}', error: true);
+    }
+  }
+
+  void _startResendCountdown() {
+    _resendTimer?.cancel();
+    setState(() => _resendSeconds = 60);
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
+      setState(() {
+        _resendSeconds--;
+        if (_resendSeconds <= 0) t.cancel();
+      });
+    });
+  }
+
+  Future<void> _resend() async {
+    final email = _registeredEmail;
+    if (email == null || _resendSeconds > 0) return;
+    try {
+      final result =
+          await ref.read(authNotifierProvider.notifier).resendVerificationCode(email);
+      if (!mounted) return;
+      final code = (result['verificationCode'] as String?)?.trim();
+      setState(() {
+        _devCode = (code != null && code.isNotEmpty) ? code : _devCode;
+        if (code != null && code.isNotEmpty) {
+          _codeCtrl.text = code;
+        }
+      });
+      _startResendCountdown();
+      _snack(result['message'] ?? 'Doğrulama kodu tekrar gönderildi');
+    } catch (e) {
+      if (mounted) _snack('Kod gönderilemedi: ${_err(e)}', error: true);
     }
   }
 
@@ -178,10 +225,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     variant: PrimaryButtonVariant.outlined,
                     onPressed: loading
                         ? null
-                        : () => setState(() {
+                        : () {
+                            _resendTimer?.cancel();
+                            setState(() {
                               _stageVerify = false;
                               _registeredEmail = null;
-                            }),
+                              _devCode = null;
+                              _resendSeconds = 0;
+                              _codeCtrl.clear();
+                            });
+                          },
                   )
                 else
                   PrimaryButton(
@@ -273,8 +326,32 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   List<Widget> _verifyFields(Color sub) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = isDark ? AppColors.accentDark : AppColors.accent;
+    final canResend = _resendSeconds <= 0;
     return [
       const SizedBox(height: 4),
+      if (_devCode != null && _devCode!.isNotEmpty) ...[
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline_rounded, size: 18, color: accent),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Test kodu: $_devCode (e-posta gönderimi kapalı)',
+                  style: TextStyle(color: accent, fontSize: 13, height: 1.3),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+      ],
       CustomTextField(
         controller: _codeCtrl,
         label: 'Doğrulama Kodu',
@@ -296,9 +373,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         },
       ),
       const SizedBox(height: 10),
-      Text(
-        'Kodu almadınız mı? 60 sn sonra tekrar deneyin',
-        style: TextStyle(color: sub, fontSize: 13),
+      TextButton(
+        onPressed: canResend ? _resend : null,
+        style: TextButton.styleFrom(
+          minimumSize: const Size(44, 44),
+          foregroundColor: accent,
+        ),
+        child: Text(
+          canResend
+              ? 'Kodu Tekrar Gönder'
+              : 'Kodu tekrar gönder ($_resendSeconds sn)',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: canResend ? accent : sub,
+          ),
+        ),
       ),
     ];
   }

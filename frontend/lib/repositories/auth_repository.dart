@@ -39,6 +39,16 @@ class AuthRepository {
     return payload;
   }
 
+  /// Doğrulama kodunu tekrar gönderir.
+  /// Sunucu log modundaysa yanıt `verificationCode` alanı içerebilir.
+  Future<Map<String, dynamic>> resendVerificationCode(String email) async {
+    final r = await dio.post<Map<String, dynamic>>(
+      '/auth/resend-verification',
+      data: {'email': email.trim()},
+    );
+    return Map<String, dynamic>.from(r.data?['data'] ?? {});
+  }
+
   Future<UserModel> verifyEmail(String email, String code) async {
     final r = await dio.post<Map<String, dynamic>>(
       '/auth/verify-email',

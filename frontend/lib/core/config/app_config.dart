@@ -28,8 +28,9 @@ class AppConfig {
   static const String themeKey = 'officialai_theme';
   static const String onboardingShownKey = 'officialai_onboarding_shown';
 
-  // AI timeout - Render cold start için artırıldı
-  static const int aiRequestTimeoutSeconds = 90;
+  // AI zaman aşımı - Render cold start + uzun yapay zekâ üretimi için artırıldı.
+  // Çok kısa tutulursa sunucu belgeyi kaydeder ama istemci yanıtı alamaz.
+  static const int aiRequestTimeoutSeconds = 180;
 
   // RegEx
   static final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');

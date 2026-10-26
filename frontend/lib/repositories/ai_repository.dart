@@ -109,6 +109,30 @@ class AIRepository {
     return Map<String, dynamic>.from(r.data?['data'] ?? {});
   }
 
+  // ================ POST /ai/send-document-email ================
+  /// Oluşturulan belgeyi (isteğe bağlı PDF ekiyle) verilen adrese e-posta atar.
+  Future<Map<String, dynamic>> sendDocumentEmail({
+    required String to,
+    required String title,
+    required String content,
+    String? subject,
+    String? message,
+    String? pdfBase64,
+  }) async {
+    final r = await dio.post<Map<String, dynamic>>(
+      '/ai/send-document-email',
+      data: {
+        'to': to.trim(),
+        'title': title,
+        'content': content,
+        if (subject != null && subject.trim().isNotEmpty) 'subject': subject.trim(),
+        if (message != null && message.trim().isNotEmpty) 'message': message.trim(),
+        if (pdfBase64 != null && pdfBase64.isNotEmpty) 'pdfBase64': pdfBase64,
+      },
+    );
+    return Map<String, dynamic>.from(r.data?['data'] ?? {});
+  }
+
   // ================ GET /ai/documents ================
   Future<List<Map<String, dynamic>>> getUserDocuments({String? type}) async {
     final params = <String, dynamic>{};

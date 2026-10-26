@@ -102,3 +102,12 @@ export const toggleFavoriteSchema = z
     path: ["documentId"],
   });
 
+export const sendDocumentEmailSchema = z.object({
+  to: z.string().trim().email("Geçerli bir e-posta adresi girin"),
+  subject: z.string().trim().max(200).optional(),
+  message: z.string().trim().max(2000).optional(),
+  title: z.string().trim().min(1, "Belge başlığı zorunlu").max(200),
+  content: z.string().trim().min(1, "Belge içeriği zorunlu").max(60000),
+  pdfBase64: z.string().max(20_000_000).optional(),
+});
+

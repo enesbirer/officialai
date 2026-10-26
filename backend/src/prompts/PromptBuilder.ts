@@ -47,9 +47,9 @@ export class PromptBuilder {
     }
 
     finalSystem += `\n\n=== ÖZEL TALİMAT ===
-- KULLANICIYA YARDIMCI OL, AÇIKLAYICI YANIT VER
-- YANITLARINI BİçİNDEKİ YAPISAL ETİKETLERİ (=== BAŞLIK GİBİ) KORU AMA DAHA OKUNABİLİR HALE GETİR
-- EKSİK BİLGİLER İÇİN MAKUL VARSAYIMLAR YAP, [BELİRTİNİZ] ETİKETİYLE İŞARETLE
+- Kullanıcıya yardımcı ol; KISA, sade ve doğrudan yanıt ver, gereksiz uzatma
+- Yukarıda belirli bir çıktı biçimi/etiket yapısı istenmişse ona uy; istenmemişse düz metin yaz
+- Eksik bilgi için uydurma yapma; ilgili alanı boş bırak veya atla
 - TÜRKÇE KARAKTERLERİ (ğşıüöç) DOĞRU KULLAN`;
 
     return { systemPrompt: finalSystem, userPrompt: this.userPrompt };

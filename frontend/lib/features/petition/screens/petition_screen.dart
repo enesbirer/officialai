@@ -12,6 +12,8 @@ import '../../../core/config/app_config.dart';
 import '../../../providers/ai_provider.dart';
 import '../../../widgets/primary_button.dart';
 import '../../../widgets/custom_text_field.dart';
+import '../widgets/document_email_dialog.dart';
+import 'document_preview_screen.dart';
 
 // Kategori alan tanımı yoksa kullanılacak genel alanlar.
 const List<Map<String, dynamic>> _genericFields = [
@@ -264,6 +266,57 @@ class _PetitionScreenState extends ConsumerState<PetitionScreen> {
 
   Future<void> _share() async {
     await Share.share(_resultCtrl.text, subject: 'OfficialAI Dilekçe');
+  }
+
+  String get _resultDisplayTitle =>
+      _resultTitle.isEmpty ? 'Resmi Dilekçe' : _resultTitle;
+
+  /// Belgeyi uygulama içi PDF görüntüleyicide açar.
+  /// [sign] true ise doğrudan imza çizim ekranı açılır.
+  Future<void> _openPreview({bool sign = false}) async {
+    final text = _resultCtrl.text.trim();
+    if (text.isEmpty) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DocumentPreviewScreen(
+          title: _resultDisplayTitle,
+          subtitle: 'OfficialAI • Dilekçe / Başvuru',
+          content: text,
+          documentType: 'petition',
+          startWithSignature: sign,
+        ),
+      ),
+    );
+  }
+
+  /// Belgeyi PDF ekiyle birlikte e-posta olarak gönderir.
+  Future<void> _sendEmail() async {
+    final text = _resultCtrl.text.trim();
+    if (text.isEmpty) return;
+    try {
+      final bytes = await PdfExportUtils.buildPdfBytes(
+        title: _resultDisplayTitle,
+        subtitle: 'OfficialAI • Dilekçe / Başvuru',
+        content: text,
+      );
+      if (!mounted) return;
+      await showDocumentEmailDialog(
+        context: context,
+        ref: ref,
+        title: _resultDisplayTitle,
+        content: text,
+        pdfBytes: bytes,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(friendlyErrorMessage(e, action: 'E-posta gönderme')),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _exportPdf() async {
@@ -913,7 +966,7 @@ class _PetitionScreenState extends ConsumerState<PetitionScreen> {
         ),
         const SizedBox(height: 4),
         Text(
-          'Düzenleyebilir, kopyalayabilir, PDF olarak indirebilir veya paylaşabilirsiniz.',
+          'Düzenleyebilir, PDF olarak görüntüleyebilir, imzalayabilir, indirebilir veya e-posta ile gönderebilirsiniz.',
           style: TextStyle(color: sub, fontSize: 13),
         ),
         const SizedBox(height: 16),
@@ -957,6 +1010,28 @@ class _PetitionScreenState extends ConsumerState<PetitionScreen> {
           children: [
             Expanded(
               child: PrimaryButton(
+                text: 'PDF Görüntüle',
+                icon: Icons.visibility_outlined,
+                variant: PrimaryButtonVariant.glass,
+                onPressed: () => _openPreview(),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: PrimaryButton(
+                text: 'İmzala',
+                icon: Icons.draw_outlined,
+                variant: PrimaryButtonVariant.glass,
+                onPressed: () => _openPreview(sign: true),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: PrimaryButton(
                 text: 'PDF İndir',
                 icon: Icons.picture_as_pdf_outlined,
                 variant: PrimaryButtonVariant.glass,
@@ -972,6 +1047,13 @@ class _PetitionScreenState extends ConsumerState<PetitionScreen> {
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 12),
+        PrimaryButton(
+          text: 'E-posta Olarak Gönder',
+          icon: Icons.mail_outline_rounded,
+          variant: PrimaryButtonVariant.outlined,
+          onPressed: _sendEmail,
         ),
         const SizedBox(height: 16),
         PrimaryButton(

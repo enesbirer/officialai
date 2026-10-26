@@ -62,7 +62,52 @@ export class AuthService {
       message: emailSent
         ? "Doğrulama kodu e-posta adresinize gönderildi"
         : "Kayıt oluşturuldu ancak doğrulama e-postası gönderilemedi. Lütfen daha sonra tekrar deneyin.",
+      // SMTP yapılandırılmadığında (geliştirme) kod istemciye döner ki akış test edilebilsin.
+      // Gerçek SMTP (EMAIL_MODE=smtp) aktif olduğunda bu alan asla dönmez.
+      ...this.devCodeFallback(emailSent, verificationCode),
     };
+  }
+
+  /** Kullanıcı için yeni bir doğrulama kodu üretip tekrar gönderir. */
+  async resendVerificationCode(email: string) {
+    const user = await this.userRepo.findByEmail(email);
+    if (!user) {
+      throw new UnauthorizedError("Kullanıcı bulunamadı");
+    }
+    if (user.isEmailVerified) {
+      return { emailSent: false, message: "Bu hesap zaten doğrulanmış." };
+    }
+
+    const verificationCode = this.emailService.generateVerificationCode();
+    const verificationCodeExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    await this.userRepo.update(user.id, { verificationCode, verificationCodeExpiresAt });
+
+    let emailSent = false;
+    try {
+      emailSent = await this.emailService.sendVerificationEmail(email, verificationCode);
+    } catch (error) {
+      console.error("Failed to resend verification email:", error);
+    }
+
+    return {
+      emailSent,
+      message: emailSent
+        ? "Doğrulama kodu e-posta adresinize yeniden gönderildi"
+        : "Doğrulama e-postası gönderilemedi. Lütfen daha sonra tekrar deneyin.",
+      ...this.devCodeFallback(emailSent, verificationCode),
+    };
+  }
+
+  /**
+   * Geliştirme kolaylığı: e-posta gönderimi mümkün değilse (log modu) kodu
+   * istemciye döndürür. Üretimde (EMAIL_MODE=smtp) her zaman boş nesne döner.
+   */
+  private devCodeFallback(emailSent: boolean, verificationCode: string) {
+    if (!emailSent && config.email.mode === "log") {
+      return { verificationCode, devCode: true };
+    }
+    return {};
   }
 
   async verifyEmail(email: string, code: string) {

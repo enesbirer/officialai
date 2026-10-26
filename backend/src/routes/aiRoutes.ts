@@ -14,6 +14,8 @@ router.post("/cv", authMiddleware, (req, res, next) => aiController.generateCV(r
 router.post("/ocr/analyze", authMiddleware, (req, res, next) => aiController.analyzeOCR(req, res, next));
 router.post("/chat", authMiddleware, (req, res, next) => aiController.chat(req, res, next));
 
+router.post("/send-document-email", authMiddleware, (req, res, next) => aiController.sendDocumentEmail(req, res, next));
+
 router.get("/documents", authMiddleware, (req, res, next) => aiController.getDocuments(req, res, next));
 router.get("/favorites", authMiddleware, (req, res, next) => aiController.getFavorites(req, res, next));
 router.post("/favorites/toggle", authMiddleware, (req, res, next) => aiController.toggleFavorite(req, res, next));

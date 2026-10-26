@@ -12,6 +12,10 @@ export const verifyEmailSchema = z.object({
   code: z.string().length(6),
 });
 
+export const resendVerificationSchema = z.object({
+  email: z.string().email(),
+});
+
 export const loginSchema = z.object({
   email: z.string().email(),
   password: z.string(),

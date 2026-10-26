@@ -1,15 +1,33 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'l10n/app_localizations.dart';
+import 'core/config/app_config.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'providers/theme_provider.dart';
 import 'providers/storage_service_provider.dart';
 import 'services/storage_service.dart';
 
+/// Render servisini uyandırır (cold start gecikmesini azaltmak için).
+/// Sonucu beklemeyiz; yalnızca servisi ısıtır.
+Future<void> _warmUpBackend() async {
+  try {
+    final dio = Dio(BaseOptions(
+      connectTimeout: const Duration(seconds: 20),
+      receiveTimeout: const Duration(seconds: 20),
+    ));
+    await dio.get('${AppConfig.baseUrl}/health');
+  } catch (_) {
+    // Sessizce yut: ısıtma başarısız olsa da uygulama çalışmaya devam eder.
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  _warmUpBackend();
 
   try {
     final storageService = StorageService();
