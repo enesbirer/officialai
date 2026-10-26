@@ -59,6 +59,23 @@ export class GeminiProvider implements AIProvider {
     );
   }
 
+  /**
+   * Hatanın model kotası/rate limit kaynaklı olup olmadığını belirler.
+   * Gemini kotası proje ve model bazında ayrı tutulduğu için bir model
+   * limite takıldığında yedek model genellikle çalışmaya devam eder.
+   */
+  private isRateLimited(err: unknown): boolean {
+    const e = err as { status?: number; message?: string; response?: { status?: number } };
+    const status = e?.status ?? e?.response?.status;
+    const msg = String(e?.message ?? "");
+    return status === 429 || /quota|rate limit|RESOURCE_EXHAUSTED/i.test(msg);
+  }
+
+  /** Hatadan sonra yedek modelin denenmesi gerekip gerekmediğini belirler. */
+  private shouldTryNextModel(err: unknown): boolean {
+    return this.isModelUnavailable(err) || this.isRateLimited(err);
+  }
+
   private requireGenAI(): GoogleGenerativeAI {
     if (!this.genAI) {
       throw new AppError(
@@ -78,10 +95,15 @@ export class GeminiProvider implements AIProvider {
       response?: { status?: number };
     };
     const status = e?.status ?? e?.response?.status ?? e?.code;
+    // 429 (kota) aynı modelde saniyeler içinde düzelmez; tekrar denemek yerine
+    // yedek modele geçilir (bkz. shouldTryNextModel).
     if (typeof status === "number") {
-      return status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+      return status === 500 || status === 502 || status === 503 || status === 504;
     }
     const msg = String(e?.message ?? "");
+    if (this.isRateLimited(err)) {
+      return false;
+    }
     // Geçersiz model / geçersiz anahtar / hatalı istek -> tekrar denemek anlamsız
     if (/404|not found|no longer available|is not supported|API key not valid|API_KEY_INVALID|INVALID_ARGUMENT|400/i.test(msg)) {
       return false;
@@ -147,13 +169,9 @@ export class GeminiProvider implements AIProvider {
   }
 
   /**
-   * Model üretim ayarları tek noktadan yönetilir.
-   *
-   * `maxOutputTokens` gemini-3.x modellerinde "düşünme" (thinking) token'larını
-   * da kapsar. 8192 verildiğinde model yaklaşık 8000 token düşünüp yanıtları
-   * 2-3 dakikaya kadar uzatıyordu (kullanıcı bu yüzden "oluşturmuyor" sanıyordu).
-   * Belgelerimiz en fazla 1-2 sayfa olduğundan 2048 hem kaliteyi korur hem de
-   * yanıt süresini belirgin biçimde kısaltır.
+   * Model üretim ayarları tek noktadan yönetilir; kod içinde dağınık
+   * generationConfig tanımı bırakılmaz. Ürettiğimiz belgeler en fazla 1-2
+   * sayfa olduğundan 2048 token yeterlidir ve kontrolsüz uzun üretimi engeller.
    */
   private generationConfig() {
     return {
@@ -214,9 +232,9 @@ export class GeminiProvider implements AIProvider {
         break;
       } catch (err) {
         lastError = err;
-        if (!this.isModelUnavailable(err)) break;
+        if (!this.shouldTryNextModel(err)) break;
         console.warn(
-          `[GeminiProvider] "${modelName}" modeli kullanılamıyor, sıradaki model deneniyor.`
+          `[GeminiProvider] "${modelName}" modeli kullanılamıyor veya kotası dolu, sıradaki model deneniyor.`
         );
       }
     }
@@ -277,9 +295,9 @@ export class GeminiProvider implements AIProvider {
         break;
       } catch (err) {
         lastError = err;
-        if (!this.isModelUnavailable(err)) break;
+        if (!this.shouldTryNextModel(err)) break;
         console.warn(
-          `[GeminiProvider] "${modelName}" modeli kullanılamıyor, sıradaki model deneniyor.`
+          `[GeminiProvider] "${modelName}" modeli kullanılamıyor veya kotası dolu, sıradaki model deneniyor.`
         );
       }
     }
